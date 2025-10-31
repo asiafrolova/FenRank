@@ -71,4 +71,7 @@ dependencies {
     //firebase
     implementation(libs.firebase.ui.auth)
     implementation(libs.facebook.android.sdk)
+
+    //navigation
+    implementation(libs.androidx.navigation.compose)
 }

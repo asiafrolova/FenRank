@@ -53,11 +53,13 @@ import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController){
+fun LoginScreen(modifier: Modifier = Modifier, navController: NavController){
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     Scaffold (snackbarHost = { SnackbarHost(snackbarHostState) }) {
-        Box(modifier = Modifier.fillMaxSize().background(color = Color.Black)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .background(color = Color.Black)) {
 
             Image(
                 modifier = Modifier.fillMaxSize(),
@@ -66,15 +68,13 @@ fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController){
             )
             val email = remember{mutableStateOf("")}
             val password = remember{mutableStateOf("")}
-            val retryPassword = remember{mutableStateOf("")}
             var showPassword = remember { mutableStateOf(false) }
-            var retryShowPassword = remember { mutableStateOf(false) }
             Column(modifier = modifier
                 .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center) {
                 Text(
-                    stringResource(R.string.register_in),
+                    stringResource(R.string.sign_in),
                     modifier.padding(
                         vertical = 80.dp,
                         horizontal = 10.dp),
@@ -150,48 +150,6 @@ fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController){
                     )
 
                 )
-
-                OutlinedTextField(
-                    modifier = modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .padding(
-                            bottom = 0.dp,
-                            top = 5.dp,
-                            start = 55.dp,
-                            end = 55.dp,
-                        ),
-
-                    value = retryPassword.value,
-                    visualTransformation = if (retryShowPassword.value) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { retryShowPassword.value = !retryShowPassword.value }) {
-                            Icon(
-                                tint = Color.White,
-                                painter = (if (retryShowPassword.value) painterResource(R.drawable.face) else painterResource(R.drawable.fencing_mask)) ,
-                                contentDescription = if (retryShowPassword.value) "Hide password" else "Show password",
-                                modifier = modifier.padding(7.dp)
-                            )
-                        }
-                    },
-                    onValueChange = {retryPassword.value = it},
-                    textStyle = TextStyle(
-                        fontSize = 15.sp,
-                        color = Color.White),
-                    placeholder = {
-                        Text(
-                            stringResource(R.string.retry_password),
-                            color = Color.White)},
-                    shape = RoundedCornerShape(50.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.White,
-                        unfocusedBorderColor = Color.White,
-                        cursorColor = Color.White,
-                        focusedContainerColor = Color(107,107,107,175),
-                        unfocusedContainerColor = Color(107,107,107,175),
-                    )
-
-                )
                 Button(
 
                     onClick = {},
@@ -210,18 +168,18 @@ fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController){
                     )
                 ) {
                     Text(
-                        stringResource(R.string.register),
+                        stringResource(R.string.login),
                         color = Color.White,
                         fontSize = 17.sp)
 
                 }
                 Text(
-                    stringResource(R.string.login_if_account),
+                    stringResource(R.string.no_account_registr),
                     modifier = Modifier
                         .padding(top = 10.dp)
                         .clickable {
-                            navController.navigate(Routes.Login.route)
-                    },
+                            navController.navigate(Routes.Register.route)
+                        },
                     color = Color.White,
                     fontSize = 15.sp)
 

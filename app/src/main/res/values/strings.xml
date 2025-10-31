@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">Fencing_project</string>
+    <string name="sign_in">Sign in</string>
+    <string name="email">Email</string>
+    <string name="password">Пароль</string>
+    <string name="login">Войти</string>
+    <string name="register">Зарегестрироваться</string>
+    <string name="register_in">Register</string>
+    <string name="retry_password">Повторите пароль</string>
+    <string name="login_if_account">Уже есть аккаунт ? Войти</string>
+    <string name="no_account_registr">Нет аккаунта. Зарегестрироваться</string>
 </resources>
