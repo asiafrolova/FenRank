@@ -30,6 +30,7 @@ import com.example.fencing_project.ui.theme.Fencing_projectTheme
 import com.example.fencing_project.view.HomeScreen
 import com.example.fencing_project.view.LoginScreen
 import com.example.fencing_project.view.RegisterScreen
+import dagger.hilt.android.AndroidEntryPoint
 
 sealed class Routes(val route: String) {
 
@@ -38,6 +39,7 @@ sealed class Routes(val route: String) {
     object Register : Routes("register")
 }
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,8 +49,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val navController = rememberNavController()
-            RegisterScreen(modifier = Modifier, navController = navController)
-            NavHost(navController = navController, startDestination = "home") {
+
+            NavHost(navController = navController, startDestination = Routes.Login.route) {
                 composable(Routes.Login.route) {
                     LoginScreen(navController = navController)
                 }
@@ -56,19 +58,9 @@ class MainActivity : ComponentActivity() {
                     RegisterScreen(navController = navController)
                 }
                 composable(Routes.Home.route) {
-                    HomeScreen()
+                    HomeScreen(navController = navController)
                 }
             }
-
-
-            /*Fencing_projectTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }*/
         }
     }
 }

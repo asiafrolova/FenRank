@@ -8,5 +8,6 @@
     <string name="register_in">Register</string>
     <string name="retry_password">Повторите пароль</string>
     <string name="login_if_account">Уже есть аккаунт ? Войти</string>
-    <string name="no_account_registr">Нет аккаунта. Зарегестрироваться</string>
+    <string name="no_account_registr">Нет аккаунта ? Зарегестрироваться</string>
+    <string name="back">Назад</string>
 </resources>
