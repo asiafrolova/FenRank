@@ -3,6 +3,7 @@ package com.example.fencing_project.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.fencing_project.data.repository.AuthRepository
+import com.example.fencing_project.utils.SharedPrefsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +39,8 @@ class LoginViewModel @Inject constructor(
     fun resetState() {
         _uiState.value = LoginUiState.Idle
     }
+
+
 }
 
 sealed class LoginUiState {

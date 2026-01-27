@@ -4,10 +4,14 @@
     <string name="email">Email</string>
     <string name="password">Пароль</string>
     <string name="login">Войти</string>
-    <string name="register">Зарегестрироваться</string>
+    <string name="register">Зарегистрироваться</string>
     <string name="register_in">Register</string>
     <string name="retry_password">Повторите пароль</string>
     <string name="login_if_account">Уже есть аккаунт ? Войти</string>
     <string name="no_account_registr">Нет аккаунта ? Зарегестрироваться</string>
     <string name="back">Назад</string>
+    <string name="home">Главная</string>
+    <string name="opponents">Соперники</string>
+    <string name="add_bout">Новый бой</string>
+    <string name="profile">Профиль</string>
 </resources>

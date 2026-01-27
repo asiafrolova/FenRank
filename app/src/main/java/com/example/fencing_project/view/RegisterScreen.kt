@@ -62,7 +62,7 @@ fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController, 
     val password = remember { mutableStateOf("") }
     val retryPassword = remember { mutableStateOf("") }
 
-    // ✅ Реакция на состояние регистрации
+    // Реакция на состояние регистрации
     LaunchedEffect(registerState) {
         when (registerState) {
             is RegisterUiState.Success -> {

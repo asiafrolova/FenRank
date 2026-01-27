@@ -55,6 +55,7 @@ import androidx.navigation.NavController
 import com.example.fencing_project.MainActivity
 import com.example.fencing_project.R
 import com.example.fencing_project.Routes
+import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.viewmodel.LoginUiState
 import com.example.fencing_project.viewmodel.LoginViewModel
 import com.example.fencing_project.viewmodel.RegisterUiState
@@ -62,7 +63,8 @@ import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, viewModel: LoginViewModel = hiltViewModel()){
+fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, viewModel: LoginViewModel = hiltViewModel(),
+                pref: SharedPrefsManager){
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -75,6 +77,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
     LaunchedEffect(uiState) {
         when (uiState) {
             is LoginUiState.Success -> {
+                pref.saveLoginState(email, password)
                 navController.navigate(Routes.Home.route) {
                     popUpTo(Routes.Login.route) { inclusive = true }
                 }
@@ -89,8 +92,8 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
             else -> {}
         }
     }
-
     Scaffold (snackbarHost = { SnackbarHost(snackbarHostState) }) {
+
         Box(modifier = Modifier
             .fillMaxSize()
             .background(color = Color.Black)) {
