@@ -54,7 +54,7 @@ fun HomeScreen(
 
     Scaffold(
         floatingActionButton = {FloatingActionButton(
-            onClick = {},
+            onClick = {navController.navigate("choice_add")},
             containerColor = Color(139,0,0),
             shape = CircleShape
             ) {

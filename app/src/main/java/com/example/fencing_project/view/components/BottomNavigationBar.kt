@@ -34,14 +34,15 @@ sealed class BottomNavItem(
 }
 @Preview
 @Composable
-fun BottomNavigationBar(navController: NavController = rememberNavController()) {
+fun BottomNavigationBar(navController: NavController = rememberNavController(),
+                        containerColor:Color = Color(139,0,0)) {
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.Opponents,
         BottomNavItem.Profile
     )
 
-        NavigationBar(containerColor = Color(139, 0, 0)) {
+        NavigationBar(containerColor = containerColor) {
             val navBackStackEntry = navController.currentBackStackEntryAsState()
             val currentRoute = navBackStackEntry.value?.destination?.route
 

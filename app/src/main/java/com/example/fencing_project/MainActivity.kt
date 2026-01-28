@@ -33,6 +33,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.fencing_project.ui.theme.Fencing_projectTheme
 import com.example.fencing_project.utils.SharedPrefsManager
+import com.example.fencing_project.view.AddBoutScreen
+import com.example.fencing_project.view.AddOpponentScreen
+import com.example.fencing_project.view.ChoiceAddScreen
 import com.example.fencing_project.view.HomeScreen
 import com.example.fencing_project.view.LoginScreen
 import com.example.fencing_project.view.OpponentsScreen
@@ -47,6 +50,9 @@ sealed class Routes(val route: String) {
     object Register : Routes("register")
     object Opponents : Routes("opponents")
     object Profile : Routes("profile")
+    object ChoiceAdd : Routes("choice_add")
+    object AddBoutScreen : Routes("add_bout")
+    object AddOpponentScreen : Routes("add_opponent")
 }
 
 @AndroidEntryPoint
@@ -87,6 +93,15 @@ class MainActivity : ComponentActivity() {
                 }
                 composable(Routes.Opponents.route) {
                     OpponentsScreen(navController = navController, pref = sharedPrefs)
+                }
+                composable (Routes.ChoiceAdd.route){
+                    ChoiceAddScreen(navController = navController, pref = sharedPrefs)
+                }
+                composable(Routes.AddBoutScreen.route) {
+                    AddBoutScreen(navController = navController, pref = sharedPrefs)
+                }
+                composable (Routes.AddOpponentScreen.route){
+                    AddOpponentScreen(navController = navController, pref = sharedPrefs)
                 }
             }
         }

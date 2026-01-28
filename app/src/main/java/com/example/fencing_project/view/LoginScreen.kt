@@ -70,6 +70,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var uid by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
@@ -77,7 +78,14 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
     LaunchedEffect(uiState) {
         when (uiState) {
             is LoginUiState.Success -> {
-                pref.saveLoginState(email, password)
+                val successState = uiState as LoginUiState.Success
+                // Сохраняем данные пользователя
+                pref.saveLoginState(
+                    userId = successState.userId,    // Firebase UID
+                    email = email,
+                    password = password
+                )
+                println("DEBUG: Сохранен userId: ${successState.userId}")
                 navController.navigate(Routes.Home.route) {
                     popUpTo(Routes.Login.route) { inclusive = true }
                 }

@@ -8,26 +8,36 @@ class SharedPrefsManager (context: Context){
         context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
 
     companion object {
+        private const val KEY_USER_ID = "user_id" // Firebase UID
+        private const val KEY_USER_EMAIL = "user_email"
+        private const val KEY_USER_PASSWORD = "user_password"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
-        private const val KEY_LOGIN = "login"
-        private const val KEY_PASSWORD = "password"
     }
-    fun saveLoginState(login: String? = null, password: String? = null) {
+
+    // Исправьте метод saveLoginState
+    fun saveLoginState(userId: String, email: String, password: String) {
         with(prefs.edit()) {
-            if (login != null) {
-                putString(KEY_LOGIN, login)
-            }
-            if (password != null) {
-                putString(KEY_PASSWORD, password)
-            }
-            putBoolean(KEY_IS_LOGGED_IN, login!=null && password!=null)
+            putBoolean(KEY_IS_LOGGED_IN, true)
+            putString(KEY_USER_ID, userId) // Сохраняем UID, а не email
+            putString(KEY_USER_EMAIL, email)
+            putString(KEY_USER_PASSWORD, password)
             apply()
         }
     }
-    fun isLoggedIn(): Boolean = prefs.getBoolean(KEY_IS_LOGGED_IN, false)
-    fun getLogin(): String? = prefs.getString(KEY_LOGIN, null)
 
-    fun getPassword(): String? = prefs.getString(KEY_PASSWORD, null)
+    // Получить userId (Firebase UID)
+    fun getUserId(): String? = prefs.getString(KEY_USER_ID, null)
+
+    // Получить email
+    fun getUserEmail(): String? = prefs.getString(KEY_USER_EMAIL, null)
+
+    // Получить password
+    fun getUserPassword(): String? = prefs.getString(KEY_USER_PASSWORD, null)
+    fun isLoggedIn(): Boolean = prefs.getBoolean(KEY_IS_LOGGED_IN, false)
+    fun getLogin(): String? = prefs.getString(KEY_USER_EMAIL, null)
+
+
+
 
     fun logout() {
         prefs.edit().clear().apply()

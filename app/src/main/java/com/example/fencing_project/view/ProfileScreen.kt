@@ -55,7 +55,7 @@ import com.example.fencing_project.viewmodel.LoginViewModel
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController, viewModel: LoginViewModel = hiltViewModel(),
+fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                   pref: SharedPrefsManager) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

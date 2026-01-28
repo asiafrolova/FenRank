@@ -30,14 +30,14 @@ import com.example.fencing_project.viewmodel.LoginViewModel
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun OpponentsScreen(modifier: Modifier = Modifier, navController: NavController, viewModel: LoginViewModel = hiltViewModel(),
+fun OpponentsScreen(modifier: Modifier = Modifier, navController: NavController,
                     pref: SharedPrefsManager) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     Scaffold(
         floatingActionButton = {FloatingActionButton(
-            onClick = {},
+            onClick = {navController.navigate("choice_add")},
             containerColor = Color(139,0,0),
             shape = CircleShape
         ) {

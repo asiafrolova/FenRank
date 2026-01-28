@@ -8,6 +8,8 @@ data class Bout(
     val authorId: String = "",
     val userScore: Int = 0,
     val opponentScore: Int = 0,
-    val date: Date = Date(),
+    val date: Long = System.currentTimeMillis(),
     val comment: String = ""
-)
+){
+    constructor() : this("", "", "", 0, 0, 0, "")
+}

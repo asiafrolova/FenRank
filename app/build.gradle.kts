@@ -99,6 +99,21 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+
+    // Supabase Storage
+    implementation("io.github.jan-tennert.supabase:storage-kt:2.0.0")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.0.0")
+
+    // Для работы с изображениями
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil:2.5.0")
+
+    implementation("io.ktor:ktor-client-android:2.3.7")
+    implementation("io.ktor:ktor-client-okhttp:2.3.7")
+
+    // Для выбора изображений
+    implementation("androidx.activity:activity-compose:1.8.0")
+    implementation("androidx.compose.ui:ui:1.5.4")
 }
 kapt {
     correctErrorTypes = true
