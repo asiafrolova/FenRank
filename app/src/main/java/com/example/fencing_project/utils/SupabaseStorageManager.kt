@@ -86,21 +86,22 @@ class SupabaseStorageManager @Inject constructor(
         }
     }
 
-    suspend fun deleteOpponentAvatar(userId: String, opponentId: String): Boolean {
-        return withContext(Dispatchers.IO) {
-            try {
-                val fileName = "$opponentId.jpg"
-                val filePath = "$userId/$fileName"
 
-                storage.from(BUCKET_NAME).delete(filePath)
-                println("DEBUG: Аватарка удалена: $filePath")
-                true
-            } catch (e: Exception) {
-                println("DEBUG: Ошибка удаления аватарки: ${e.message}")
-                false
-            }
-        }
-    }
+//    suspend fun deleteOpponentAvatar(userId: String, opponentId: String): Boolean {
+//        return withContext(Dispatchers.IO) {
+//            try {
+//                val fileName = "$opponentId.jpg"
+//                val filePath = "$userId/$fileName"
+//
+//                storage.from(BUCKET_NAME).delete(filePath)
+//                println("DEBUG: Аватарка удалена: $filePath")
+//                true
+//            } catch (e: Exception) {
+//                println("DEBUG: Ошибка удаления аватарки: ${e.message}")
+//                false
+//            }
+//        }
+//    }
 
     private suspend fun compressImageToBytes(uri: Uri): ByteArray {
         return withContext(Dispatchers.IO) {
@@ -174,4 +175,36 @@ class SupabaseStorageManager @Inject constructor(
             }
         }
     }
+
+    suspend fun deleteOpponentAvatar(userId: String, opponentId: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val fileName = "$opponentId.jpg"
+                val filePath = "$userId/$fileName"
+
+                println("DEBUG: Удаляем аватарку по пути: $filePath")
+
+                // Удаляем файл из Supabase Storage
+                storage.from(BUCKET_NAME).delete(filePath)
+
+                println("DEBUG: Аватарка успешно удалена из Supabase Storage")
+                true
+            } catch (e: Exception) {
+                println("DEBUG: Ошибка удаления аватарки: ${e.message}")
+                e.printStackTrace()
+
+                // Если файл не найден, считаем успехом
+                if (e.message?.contains("not found", ignoreCase = true) == true ||
+                    e.message?.contains("404", ignoreCase = true) == true) {
+                    println("DEBUG: Файл не найден, возможно уже удален")
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+    }
+
+
+
 }

@@ -44,6 +44,14 @@ object AppModule {
     fun provideAuthRepository(firebaseAuth: FirebaseAuth): AuthRepository {
         return AuthRepository(firebaseAuth)
     }
+    @Provides
+    @Singleton
+    fun provideBoutRepository(
+        database: FirebaseDatabase,
+        storageManager: SupabaseStorageManager
+    ): BoutRepository {
+        return BoutRepository(database, storageManager)
+    }
 
     @Provides
     @Singleton

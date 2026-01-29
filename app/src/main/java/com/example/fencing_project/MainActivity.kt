@@ -33,11 +33,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.fencing_project.ui.theme.Fencing_projectTheme
 import com.example.fencing_project.utils.SharedPrefsManager
-import com.example.fencing_project.view.AddBoutScreen
-import com.example.fencing_project.view.AddOpponentScreen
+
+import com.example.fencing_project.view.BoutEditScreen
 import com.example.fencing_project.view.ChoiceAddScreen
 import com.example.fencing_project.view.HomeScreen
 import com.example.fencing_project.view.LoginScreen
+import com.example.fencing_project.view.OpponentEditScreen
 import com.example.fencing_project.view.OpponentsScreen
 import com.example.fencing_project.view.ProfileScreen
 import com.example.fencing_project.view.RegisterScreen
@@ -53,6 +54,9 @@ sealed class Routes(val route: String) {
     object ChoiceAdd : Routes("choice_add")
     object AddBoutScreen : Routes("add_bout")
     object AddOpponentScreen : Routes("add_opponent")
+    object EditBout : Routes("edit_bout/{boutId}")
+    object EditOpponent : Routes("edit_opponent/{opponentId}")
+    object AddBoutWithOpponent : Routes("edit_bout_with/{opponentId}")
 }
 
 @AndroidEntryPoint
@@ -98,10 +102,36 @@ class MainActivity : ComponentActivity() {
                     ChoiceAddScreen(navController = navController, pref = sharedPrefs)
                 }
                 composable(Routes.AddBoutScreen.route) {
-                    AddBoutScreen(navController = navController, pref = sharedPrefs)
+                    //AddBoutScreen(navController = navController, pref = sharedPrefs)
+                    BoutEditScreen(navController=navController, pref = sharedPrefs)
                 }
                 composable (Routes.AddOpponentScreen.route){
-                    AddOpponentScreen(navController = navController, pref = sharedPrefs)
+                    //AddOpponentScreen(navController = navController, pref = sharedPrefs)
+                    OpponentEditScreen(navController=navController, pref = sharedPrefs)
+                }
+                composable(Routes.EditBout.route) { backStackEntry ->
+                    val boutId = backStackEntry.arguments?.getString("boutId")
+                    BoutEditScreen(
+                        navController = navController,
+                        pref = sharedPrefs,
+                        boutId = boutId // Передаем ID для редактирования
+                    )
+                }
+                composable(Routes.EditOpponent.route) { backStackEntry ->
+                    val opponentId = backStackEntry.arguments?.getString("opponentId")
+                    OpponentEditScreen(
+                        navController = navController,
+                        pref = sharedPrefs,
+                        opponentId = opponentId // Передаем ID для редактирования
+                    )
+                }
+                composable(Routes.AddBoutWithOpponent.route) { backStackEntry ->
+                    val opponentId = backStackEntry.arguments?.getString("opponentId")
+                    BoutEditScreen(
+                        navController = navController,
+                        pref = sharedPrefs,
+                        startOpponentId = opponentId // Передаем ID для редактирования
+                    )
                 }
             }
         }

@@ -186,6 +186,10 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
 
                         )
                     OptionItem(
+                        icon = painterResource(R.drawable.statistics), title = "Статистика",
+
+                        )
+                    OptionItem(
                         icon = painterResource(R.drawable.settings), title = "Настройки",
 
                         )
