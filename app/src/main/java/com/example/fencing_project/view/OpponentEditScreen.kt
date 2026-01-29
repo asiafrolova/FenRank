@@ -1,6 +1,7 @@
 // OpponentEditScreen.kt
 package com.example.fencing_project.view
 
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -26,12 +27,18 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.canhub.cropper.CropImageContract
+import com.canhub.cropper.CropImageContractOptions
+import com.canhub.cropper.CropImageOptions
+import com.canhub.cropper.CropImageView
 import com.example.fencing_project.R
 import com.example.fencing_project.data.model.Opponent
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.viewmodel.OpponentViewModel
 import kotlinx.coroutines.launch
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,13 +65,6 @@ fun OpponentEditScreen(
     val menuItemsWeaponHand = listOf("Правая", "Левая")
     val menuItemsWeaponType = listOf("Шпага", "Рапира", "Сабля")
 
-    val pickMedia = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) {
-            selectedImageUri = uri
-        }
-    }
 
     // Состояния ViewModel
     val opponentState by opponentViewModel.opponentState.collectAsState()
@@ -80,6 +80,36 @@ fun OpponentEditScreen(
         when (opponentState) {
             is UIState.Success -> (opponentState as UIState.Success<Opponent>).data
             else -> null
+        }
+    }
+
+    val cropLauncher = rememberLauncherForActivityResult(CropImageContract()) { result ->
+        if (result.isSuccessful) {
+            result.uriContent?.let { uri ->
+                selectedImageUri = uri
+            }
+        }
+    }
+
+    val pickMedia = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            // Запускаем обрезку после выбора фото
+            val options = CropImageContractOptions(
+                uri,
+                CropImageOptions(
+                    activityTitle = "Обрезать фото",
+                    aspectRatioX = 1,
+                    aspectRatioY = 1,
+                    cropShape = CropImageView.CropShape.OVAL, // Круглая форма
+                    fixAspectRatio = true,
+                    guidelines = CropImageView.Guidelines.ON,
+                    outputCompressFormat = Bitmap.CompressFormat.JPEG,
+                    outputCompressQuality = 90
+                )
+            )
+            cropLauncher.launch(options)
         }
     }
 
@@ -556,7 +586,7 @@ fun OpponentEditScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 10.dp),
+                        .padding(bottom = 0.dp, top=10.dp, start=10.dp,end=10.dp),
                     enabled = !isLoading && saveOpponentState !is UIState.Loading,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(139, 0, 0),
@@ -580,7 +610,7 @@ fun OpponentEditScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 10.dp),
+                            .padding(start=10.dp, end=10.dp, bottom=10.dp,top=10.dp),
                         enabled = !isLoading && deleteOpponentState !is UIState.Loading,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF757575),

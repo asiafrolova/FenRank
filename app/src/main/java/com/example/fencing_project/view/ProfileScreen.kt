@@ -1,6 +1,9 @@
 package com.example.fencing_project.view
 
 import android.annotation.SuppressLint
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,8 +31,13 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +48,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -47,18 +56,75 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.canhub.cropper.CropImageContract
+import com.canhub.cropper.CropImageContractOptions
+import com.canhub.cropper.CropImageOptions
+import com.canhub.cropper.CropImageView
 import com.example.fencing_project.R
 import com.example.fencing_project.utils.SharedPrefsManager
+import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.view.components.BottomNavigationBar
-import com.example.fencing_project.viewmodel.LoginViewModel
+import com.example.fencing_project.viewmodel.ProfileViewModel
+
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
-                  pref: SharedPrefsManager) {
+                  pref: SharedPrefsManager, viewModel: ProfileViewModel = hiltViewModel()) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    val updateState by viewModel.updateState.collectAsState()
+    val currentUser = remember { viewModel.getCurrentUser() }
+    val userAvatarUrl by viewModel.userAvatarUrl.collectAsState()
+    println("DEBUG: userAvatarUrl = ${userAvatarUrl}")
+
+    var showImagePicker by remember { mutableStateOf(false) }
+
+    // Image Picker with Crop (как раньше)
+    val cropLauncher = rememberLauncherForActivityResult(CropImageContract()) { result ->
+        if (result.isSuccessful) {
+            result.uriContent?.let { uri ->
+                viewModel.updateUserAvatar(uri)
+            }
+        }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let {
+            val options = CropImageContractOptions(
+                it,
+                CropImageOptions().apply {
+                    cropShape = CropImageView.CropShape.OVAL
+                    fixAspectRatio = true
+                    aspectRatioX = 1
+                    aspectRatioY = 1
+                    activityTitle = "Обрезать фото"
+                }
+            )
+            cropLauncher.launch(options)
+        }
+    }
+
+    // Обработка состояния
+    LaunchedEffect(updateState) {
+        when (updateState) {
+            is UIState.Success -> {
+                // Snackbar или toast
+                viewModel.resetState()
+            }
+            is UIState.Error -> {
+                // Ошибка
+                viewModel.resetState()
+            }
+            else -> {}
+        }
+    }
 
     Scaffold(
 
@@ -81,8 +147,9 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                 contentAlignment = Alignment.Center
             ) {
                 Box(modifier = Modifier.padding(10.dp).size(230.dp)) {
-                    Image(
-                        painter = painterResource(R.drawable.avatar), contentDescription = "avatar",
+                    AsyncImage(
+                        model = "https://"+userAvatarUrl,
+                        contentDescription = "Аватар",
                         modifier = Modifier.padding(
                             top = 0.dp,
                             end = 0.dp,
@@ -90,10 +157,15 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                             bottom = 0.dp
                         ).size(200.dp).clip(CircleShape)
                             .border(3.dp, Color.White, shape = CircleShape),
+                        contentScale = ContentScale.Crop,
+                        error = painterResource(R.drawable.avatar),
+                        placeholder = painterResource(R.drawable.avatar)
                     )
 
+
                     IconButton(
-                        onClick = {},
+                        onClick = {galleryLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},
                         modifier = Modifier.padding(top = 160.dp, start = 160.dp).size(45.dp),
                         shape = CircleShape,
                         colors = IconButtonColors(
@@ -147,7 +219,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                             disabledContainerColor =  Color(25,25,33),
                             disabledContentColor = Color.White
                         ),
-                        onClick={},
+                        onClick={onClick()},
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(5.dp)
@@ -202,7 +274,10 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                 ) {
                     OptionItem(
                         icon = painterResource(R.drawable.logout), title = "Выйти из аккаунта",
+                        onClick = {
 
+                            pref.logout()
+                            navController.navigate("login")}
                         )
                 }
             }

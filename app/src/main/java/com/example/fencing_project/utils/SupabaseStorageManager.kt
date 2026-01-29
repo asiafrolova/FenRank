@@ -21,6 +21,7 @@ class SupabaseStorageManager @Inject constructor(
 
     companion object {
         private const val BUCKET_NAME = "opponent-avatars"
+        private const val USER_BUCKET_NAME = "user-avatars"
         private const val MAX_IMAGE_SIZE = 1024 * 1024 // 1MB
     }
 
@@ -86,22 +87,6 @@ class SupabaseStorageManager @Inject constructor(
         }
     }
 
-
-//    suspend fun deleteOpponentAvatar(userId: String, opponentId: String): Boolean {
-//        return withContext(Dispatchers.IO) {
-//            try {
-//                val fileName = "$opponentId.jpg"
-//                val filePath = "$userId/$fileName"
-//
-//                storage.from(BUCKET_NAME).delete(filePath)
-//                println("DEBUG: Аватарка удалена: $filePath")
-//                true
-//            } catch (e: Exception) {
-//                println("DEBUG: Ошибка удаления аватарки: ${e.message}")
-//                false
-//            }
-//        }
-//    }
 
     private suspend fun compressImageToBytes(uri: Uri): ByteArray {
         return withContext(Dispatchers.IO) {
@@ -201,6 +186,67 @@ class SupabaseStorageManager @Inject constructor(
                 } else {
                     false
                 }
+            }
+        }
+    }
+
+    // SupabaseStorageManager.kt
+// Добавь только эти методы
+    suspend fun uploadUserAvatar(
+        userId: String, // Firebase UID
+        imageUri: Uri
+    ): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                println("DEBUG: Загрузка аватарки пользователя $userId")
+
+                // Сжимаем изображение
+                val compressedBytes = compressImageToBytes(imageUri)
+
+                // Путь: userId/avatar.jpg
+                val fileName = "avatar.jpg"
+                val filePath = "$userId/$fileName"
+
+                println("DEBUG: Загружаем в user-avatars по пути: $filePath")
+
+                // Загружаем
+                storage.from(USER_BUCKET_NAME).upload(
+                    path = filePath,
+                    data = compressedBytes,
+                    upsert = true
+                )
+
+                // Генерируем URL
+                val publicUrl = generateUserAvatarUrl(userId)
+
+                println("DEBUG: Аватарка загружена, URL: $publicUrl")
+                publicUrl
+
+            } catch (e: Exception) {
+                println("DEBUG: Ошибка загрузки: ${e.message}")
+                null
+            }
+        }
+    }
+
+    // Генерация URL без обращения к Supabase
+    fun generateUserAvatarUrl(userId: String): String {
+        val baseUrl = supabaseClient.supabaseUrl.removeSuffix("/")
+        return "$baseUrl/storage/v1/object/public/$USER_BUCKET_NAME/$userId/avatar.jpg"
+    }
+
+    suspend fun deleteUserAvatar(userId: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val filePath = "$userId/avatar.jpg"
+                storage.from(USER_BUCKET_NAME).delete(filePath)
+                println("DEBUG: Аватарка удалена")
+                true
+            } catch (e: Exception) {
+                println("DEBUG: Ошибка удаления: ${e.message}")
+                // Если файл не найден - все ок
+                e.message?.contains("not found", ignoreCase = true) == true ||
+                        e.message?.contains("404", ignoreCase = true) == true
             }
         }
     }
