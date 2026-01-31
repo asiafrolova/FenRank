@@ -36,7 +36,8 @@ fun HomeScreen(
     navController: NavController,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val userId: String? = viewModel.currentUser()?.uid
+
+    val userId: String? = viewModel.getCurrentUser()?.uid
     LaunchedEffect(key1 = userId) {
         if (userId != null && userId.isNotBlank()) {
             println("DEBUG: Загружаем данные для userId: $userId")
@@ -111,7 +112,7 @@ fun HomeScreen(
 
             // Секция: Самые популярные соперники
             Text(
-                text = "Самые популярные соперники",
+                text = "Популярные соперники",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
@@ -211,21 +212,6 @@ fun HomeScreen(
                             }
                         )
 
-                        // Кнопка "Показать все" если боев больше 5
-                        if ((boutsState as UIState.Success<List<Bout>>).data.size > 5) {
-                            TextButton(
-                                onClick = { navController.navigate("opponents") },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp)
-                            ) {
-                                Text(
-                                    text = "Показать все бои",
-                                    color = Color(139, 0, 0),
-                                    fontSize = 14.sp
-                                )
-                            }
-                        }
                     }
                 }
 

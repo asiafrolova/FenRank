@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.fencing_project"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -116,6 +116,21 @@ dependencies {
     implementation("androidx.compose.ui:ui:1.5.4")
 
     implementation("com.vanniktech:android-image-cropper:4.7.0")
+
+    // Для работы с Excel
+    implementation("org.apache.poi:poi:5.2.3")
+    implementation("org.apache.poi:poi-ooxml:5.2.3")
+// Для разрешений на Android
+    implementation("androidx.core:core-ktx:1.12.0")
+
+
+    // Room Database
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+
+    // Для миграций
+    implementation("androidx.room:room-paging:2.6.1")
 
 }
 kapt {

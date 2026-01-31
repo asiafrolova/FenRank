@@ -89,7 +89,7 @@ class OpponentViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val currentUser = authRepository.currentUser()
+                val currentUser = authRepository.getCurrentUser()
                 if (currentUser != null) {
                     println("DEBUG: Начинаем обновление соперника $opponentId")
 
@@ -249,7 +249,7 @@ class OpponentViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val currentUser = authRepository.currentUser()
+                val currentUser = authRepository.getCurrentUser()
                 if (currentUser != null) {
                     val success = repository.deleteOpponentWithAvatar(
                         opponentId = opponentId,

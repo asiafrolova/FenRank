@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
@@ -25,9 +26,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,15 +61,18 @@ import com.example.fencing_project.Routes
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.viewmodel.LoginUiState
 import com.example.fencing_project.viewmodel.LoginViewModel
+import com.example.fencing_project.viewmodel.ProfileViewModel
 import com.example.fencing_project.viewmodel.RegisterUiState
 import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, viewModel: LoginViewModel = hiltViewModel(),
-                pref: SharedPrefsManager){
+                pref: SharedPrefsManager,profileViewModel: ProfileViewModel=hiltViewModel()){
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
+    var showSuccessDialog by remember { mutableStateOf(false) }
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -74,6 +80,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
     var showPassword by remember { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
+
 
     LaunchedEffect(uiState) {
         when (uiState) {
@@ -100,6 +107,41 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
             else -> {}
         }
     }
+    if (showSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showSuccessDialog = false
+
+            },
+            title = {
+                Text(
+                    "Успешно",
+                    color = Color.White
+                )
+            },
+            text = {
+                Text(
+                    "На указанную почту отправлено письмо для сброса пароля",
+                    color = Color.White
+                )
+            },
+            containerColor = Color(61, 61, 70),
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSuccessDialog = false
+
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(44, 44, 51),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("OK")
+                }
+            }
+        )
+    }
     Scaffold (snackbarHost = { SnackbarHost(snackbarHostState) }) {
 
         Box(modifier = Modifier
@@ -111,7 +153,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
                 painter = painterResource(id = R.drawable.fon),
                 contentDescription = null
             )
-
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
             Column(modifier = modifier
                 .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -225,10 +267,37 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
 
 
                 }
+                TextButton(
+                    onClick = {
+                        if(email.isBlank()){
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = "Введите почту",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                        }else{
+                            profileViewModel.sendPasswordResetEmail(email)
+                            showSuccessDialog = true
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = Color.White
+                    )
+
+                ) {
+                    Text(
+                        "Забыли пароль?",
+                        fontSize = 14.sp,
+                    )
+                }}
                 Text(
                     stringResource(R.string.no_account_registr),
                     modifier = Modifier
-                        .padding(top = 10.dp)
+                        .padding(top = 10.dp, bottom = 10.dp)
+                        .align(Alignment.BottomCenter)
                         .clickable {
                             navController.navigate(Routes.Register.route)
                         },

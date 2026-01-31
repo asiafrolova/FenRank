@@ -250,20 +250,20 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                     OptionItem(
                         icon = painterResource(R.drawable.change_profile),
                         title = "Редактировать профиль",
-
+                        onClick = {navController.navigate("profile_edit")}
                         )
-                    OptionItem(
-                        icon = painterResource(R.drawable.change_password),
-                        title = "Сменить пароль",
-
-                        )
+//                    OptionItem(
+//                        icon = painterResource(R.drawable.change_password),
+//                        title = "Сменить пароль",
+//                        onClick = {navController.navigate("change_password")}
+//                        )
                     OptionItem(
                         icon = painterResource(R.drawable.statistics), title = "Статистика",
-
+                        onClick = {navController.navigate("statistics")}
                         )
                     OptionItem(
                         icon = painterResource(R.drawable.settings), title = "Настройки",
-
+                        onClick = {navController.navigate("settings")}
                         )
                 }
                 Column(modifier = Modifier
@@ -275,7 +275,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                     OptionItem(
                         icon = painterResource(R.drawable.logout), title = "Выйти из аккаунта",
                         onClick = {
-
+                            viewModel.logout()
                             pref.logout()
                             navController.navigate("login")}
                         )

@@ -99,5 +99,5 @@ class HomeViewModel @Inject constructor(
         _addOpponentState.value = UIState.Idle
     }
 
-    fun currentUser() = authRepository.currentUser()
+    fun getCurrentUser() = authRepository.getCurrentUser()
 }

@@ -20,7 +20,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val storageManager: SupabaseStorageManager
+    private val storageManager: SupabaseStorageManager,
+    private val boutRepository: BoutRepository,
 ) : ViewModel() {
 
     private val _updateState = MutableStateFlow<UIState<String>>(UIState.Idle)
@@ -37,12 +38,82 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    private val _updateEmailState = MutableStateFlow<UIState<Unit>>(UIState.Idle)
+    val updateEmailState = _updateEmailState.asStateFlow()
+
+    private val _updatePasswordState = MutableStateFlow<UIState<Unit>>(UIState.Idle)
+    val updatePasswordState = _updatePasswordState.asStateFlow()
+
+    private val _updatePasswordStateSimple = MutableStateFlow<UIState<Unit>>(UIState.Idle)
+    val updatePasswordStateSimple = _updatePasswordStateSimple.asStateFlow()
+
+    private val _deleteProfileState = MutableStateFlow<UIState<Unit>>(UIState.Idle)
+    val deleteProfileState = _deleteProfileState.asStateFlow()
+
+    fun updateEmail(
+        currentEmail: String,
+        currentPassword: String,
+        newEmail: String
+    ) {
+        _updateEmailState.value = UIState.Loading
+
+        viewModelScope.launch {
+            val result = authRepository.updateEmail(
+                currentEmail = currentEmail,
+                currentPassword = currentPassword,
+                newEmail = newEmail
+            )
+
+            _updateEmailState.value = when {
+                result.isSuccess -> UIState.Success(Unit)
+                else -> UIState.Error(result.exceptionOrNull()?.message ?: "Ошибка")
+            }
+            println("DEBUG: state = ${_updateEmailState.value}")
+        }
+    }
+
+    fun updatePassword(
+        currentEmail: String,
+        currentPassword: String,
+        newPassword: String
+    ) {
+        _updatePasswordState.value = UIState.Loading
+
+        viewModelScope.launch {
+            val result = authRepository.updatePassword(
+                currentEmail = currentEmail,
+                currentPassword = currentPassword,
+                newPassword = newPassword
+            )
+
+            _updatePasswordState.value = when {
+                result.isSuccess -> UIState.Success(Unit)
+                else -> UIState.Error(result.exceptionOrNull()?.message ?: "Ошибка")
+            }
+            println("DEBUG: state = ${ _updatePasswordState.value}")
+        }
+    }
+    fun sendPasswordResetEmail(currentEmail: String){
+        _updatePasswordStateSimple.value = UIState.Loading
+
+        viewModelScope.launch {
+            val result = authRepository.sendPasswordResetEmail(
+                email = currentEmail
+            )
+            _updatePasswordStateSimple.value = when {
+                result.isSuccess -> UIState.Success(Unit)
+                else -> UIState.Error(result.exceptionOrNull()?.message ?: "Ошибка")
+            }
+        }
+
+    }
+
     // Получаем текущего пользователя
-    fun getCurrentUser() = authRepository.currentUser()
+    fun getCurrentUser() = authRepository.getCurrentUser()
 
     // Обновляем URL аватарки
     private suspend fun updateAvatarUrl() {
-        val user = authRepository.currentUser()
+        val user = authRepository.getCurrentUser()
         _userAvatarUrl.value = user?.let {
             storageManager.generateUserAvatarUrl(it.uid)
         }
@@ -54,7 +125,7 @@ class ProfileViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val user = authRepository.currentUser()
+                val user = authRepository.getCurrentUser()
                 if (user != null) {
                     println("DEBUG: Обновление аватарки для ${user.uid}")
 
@@ -88,7 +159,7 @@ class ProfileViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val user = authRepository.currentUser()
+                val user = authRepository.getCurrentUser()
                 if (user != null) {
                     val success = storageManager.deleteUserAvatar(user.uid)
 
@@ -109,7 +180,56 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    fun deleteProfile(){
+
+    }
     fun resetState() {
         _updateState.value = UIState.Idle
+    }
+    fun logout(){
+        authRepository.logout()
+    }
+
+    fun deleteAccount(currentPassword: String) {
+        _deleteProfileState.value = UIState.Loading
+
+        viewModelScope.launch {
+            try {
+                val user = authRepository.getCurrentUser()
+                if (user == null) {
+                    _deleteProfileState.value = UIState.Error("Пользователь не найден")
+                    return@launch
+                }
+
+                val userId = user.uid
+
+                // 1. Удаляем аватарку пользователя из Supabase
+                storageManager.deleteUserAvatar(userId)
+
+                // 2. Удаляем всех соперников пользователя с их аватарками
+                val opponentIds = authRepository.getUserOpponents(userId)
+                opponentIds.forEach { opponentId ->
+                    boutRepository.deleteOpponent(opponentId)
+                    storageManager.deleteOpponentAvatar(userId, opponentId)
+                }
+
+                // 3. Удаляем аккаунт из Firebase Auth (удалит все данные через правила безопасности)
+                val result = authRepository.deleteAccount(currentPassword)
+
+                _deleteProfileState.value = if (result.isSuccess) {
+                    UIState.Success(Unit)
+                } else {
+                    UIState.Error(result.exceptionOrNull()?.message ?: "Ошибка")
+                }
+
+            } catch (e: Exception) {
+                _deleteProfileState.value = UIState.Error(e.message ?: "Ошибка")
+            }
+        }
+    }
+
+    // Добавь в конце класса сброс состояния
+    fun resetDeleteAccountState() {
+        _deleteProfileState.value = UIState.Idle
     }
 }

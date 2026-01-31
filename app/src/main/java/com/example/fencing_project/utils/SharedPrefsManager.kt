@@ -12,6 +12,7 @@ class SharedPrefsManager (context: Context){
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_PASSWORD = "user_password"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
+
     }
 
     // Исправьте метод saveLoginState
@@ -24,6 +25,7 @@ class SharedPrefsManager (context: Context){
             apply()
         }
     }
+
 
     // Получить userId (Firebase UID)
     fun getUserId(): String? = prefs.getString(KEY_USER_ID, null)

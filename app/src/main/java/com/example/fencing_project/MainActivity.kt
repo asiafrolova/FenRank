@@ -35,13 +35,17 @@ import com.example.fencing_project.ui.theme.Fencing_projectTheme
 import com.example.fencing_project.utils.SharedPrefsManager
 
 import com.example.fencing_project.view.BoutEditScreen
+import com.example.fencing_project.view.ChangePasswordScreen
 import com.example.fencing_project.view.ChoiceAddScreen
 import com.example.fencing_project.view.HomeScreen
 import com.example.fencing_project.view.LoginScreen
 import com.example.fencing_project.view.OpponentEditScreen
 import com.example.fencing_project.view.OpponentsScreen
+import com.example.fencing_project.view.ProfileEditScreen
 import com.example.fencing_project.view.ProfileScreen
 import com.example.fencing_project.view.RegisterScreen
+import com.example.fencing_project.view.SettingsScreen
+import com.example.fencing_project.view.StatisticsScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 sealed class Routes(val route: String) {
@@ -57,6 +61,10 @@ sealed class Routes(val route: String) {
     object EditBout : Routes("edit_bout/{boutId}")
     object EditOpponent : Routes("edit_opponent/{opponentId}")
     object AddBoutWithOpponent : Routes("edit_bout_with/{opponentId}")
+    object ProfileEdit : Routes("profile_edit")
+    object ChangePassword : Routes("change_password")
+    object Settings: Routes("settings")
+    object Statistics : Routes("statistics")
 }
 
 @AndroidEntryPoint
@@ -132,6 +140,18 @@ class MainActivity : ComponentActivity() {
                         pref = sharedPrefs,
                         startOpponentId = opponentId // Передаем ID для редактирования
                     )
+                }
+                composable (Routes.ProfileEdit.route){
+                    ProfileEditScreen(navController = navController, pref = sharedPrefs)
+                }
+                composable (Routes.ChangePassword.route){
+                    ChangePasswordScreen(navController = navController, pref = sharedPrefs)
+                }
+                composable (Routes.Settings.route){
+                    SettingsScreen(navController = navController, pref = sharedPrefs)
+                }
+                composable (Routes.Statistics.route){
+                    StatisticsScreen(navController = navController, pref = sharedPrefs)
                 }
             }
         }
