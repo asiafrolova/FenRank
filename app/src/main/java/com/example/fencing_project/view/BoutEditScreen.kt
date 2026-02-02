@@ -22,13 +22,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.fencing_project.R
-import com.example.fencing_project.data.model.Bout
-import com.example.fencing_project.data.model.Opponent
+import com.example.fencing_project.data.local.LocalBout
+import com.example.fencing_project.data.local.LocalOpponent
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.viewmodel.BoutViewModel
@@ -40,9 +39,12 @@ import kotlinx.coroutines.delay
 @Composable
 fun BoutEditScreen(
     navController: NavController,
+
+
+
     pref: SharedPrefsManager,
-    boutId: String? = null,
-    startOpponentId:String?=null,
+    boutId: Long? = null,
+    startOpponentId: Long? =0,
     boutViewModel: BoutViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -51,7 +53,7 @@ fun BoutEditScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Состояния формы
-    var selectedOpponentId by remember { mutableStateOf(startOpponentId?: "") }
+    var selectedOpponentId by remember { mutableStateOf(startOpponentId?: 0) }
     var userScore by remember { mutableStateOf("") }
     var opponentScore by remember { mutableStateOf("") }
     var comment by remember { mutableStateOf("") }
@@ -85,7 +87,7 @@ fun BoutEditScreen(
     // Заполняем форму данными боя при загрузке
     LaunchedEffect(boutState) {
         if (boutState is UIState.Success && boutId != null) {
-            val bout = (boutState as UIState.Success<Bout>).data
+            val bout = (boutState as UIState.Success<LocalBout>).data
             selectedOpponentId = bout.opponentId
             userScore = bout.userScore.toString()
             opponentScore = bout.opponentScore.toString()
@@ -324,7 +326,7 @@ fun BoutEditScreen(
                 // Получаем список соперников
                 val opponentList = remember(opponentsState) {
                     when (opponentsState) {
-                        is UIState.Success -> (opponentsState as UIState.Success<List<Opponent>>).data
+                        is UIState.Success -> (opponentsState as UIState.Success<List<LocalOpponent>>).data
                         else -> emptyList()
                     }
                 }
@@ -345,7 +347,7 @@ fun BoutEditScreen(
                         label = { Text("Соперник") },
                         leadingIcon = {
                             AsyncImage(
-                                model = selectedOpponent?.avatarUrl,
+                                model = selectedOpponent?.avatarPath,
                                 contentDescription = "Аватар ${selectedOpponent?.name}",
                                 modifier = Modifier
                                     .size(30.dp)
@@ -395,7 +397,7 @@ fun BoutEditScreen(
                                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                                         ) {
                                             AsyncImage(
-                                                model = opponent.avatarUrl,
+                                                model = opponent.avatarPath,
                                                 contentDescription = "Аватар ${opponent.name}",
                                                 modifier = Modifier
                                                     .size(35.dp)
@@ -422,7 +424,7 @@ fun BoutEditScreen(
                     }
                 }
 
-                if (selectedOpponentId.isNotBlank()) {
+                if (selectedOpponentId!=0L) {
                     TextButton(
                         onClick = {
                             if (!isLoading) {
@@ -572,10 +574,10 @@ fun BoutEditScreen(
                 // Кнопка сохранения/добавления
                 Button(
                     onClick = {
-                        if (!isLoading && selectedOpponentId.isNotBlank() &&
+                        if (!isLoading && selectedOpponentId!=0L &&
                             userScore.isNotBlank() && opponentScore.isNotBlank()) {
-                            val bout = Bout(
-                                id = boutId ?: "",
+                            val bout = LocalBout(
+                                id = boutId?:0,
                                 opponentId = selectedOpponentId,
                                 authorId = userId ?: "",
                                 userScore = userScore.toIntOrNull() ?: 0,
@@ -592,7 +594,7 @@ fun BoutEditScreen(
                         } else if (!isLoading) {
                             coroutineScope.launch {
                                 when {
-                                    selectedOpponentId.isBlank() ->
+                                    selectedOpponentId==0L ->
                                         snackbarHostState.showSnackbar(
                                             message = "Выберите соперника",
                                             duration = SnackbarDuration.Short

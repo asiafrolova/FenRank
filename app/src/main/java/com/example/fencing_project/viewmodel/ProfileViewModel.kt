@@ -3,15 +3,19 @@ package com.example.fencing_project.viewmodel
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.fencing_project.data.model.Bout
-import com.example.fencing_project.data.model.Opponent
+import com.example.fencing_project.data.local.LocalBoutRepository
+import com.example.fencing_project.data.local.LocalStorageManager
+
 import com.example.fencing_project.data.repository.AuthRepository
 import com.example.fencing_project.data.repository.BoutRepository
+import com.example.fencing_project.data.repository.SyncRepository
 import com.example.fencing_project.utils.SupabaseStorageManager
 import com.example.fencing_project.utils.UIState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -20,8 +24,12 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val storageManager: SupabaseStorageManager,
-    private val boutRepository: BoutRepository,
+    private val firebaseStorageManager: SupabaseStorageManager,
+    private val firebaseBoutRepository: BoutRepository,
+    private val storageManager: LocalStorageManager,
+    private val boutRepository: LocalBoutRepository,
+    private val syncRepository: SyncRepository,
+
 ) : ViewModel() {
 
     private val _updateState = MutableStateFlow<UIState<String>>(UIState.Idle)
@@ -49,6 +57,8 @@ class ProfileViewModel @Inject constructor(
 
     private val _deleteProfileState = MutableStateFlow<UIState<Unit>>(UIState.Idle)
     val deleteProfileState = _deleteProfileState.asStateFlow()
+
+
 
     fun updateEmail(
         currentEmail: String,
@@ -113,10 +123,12 @@ class ProfileViewModel @Inject constructor(
 
     // Обновляем URL аватарки
     private suspend fun updateAvatarUrl() {
-        val user = authRepository.getCurrentUser()
-        _userAvatarUrl.value = user?.let {
-            storageManager.generateUserAvatarUrl(it.uid)
-        }
+//        val user = authRepository.getCurrentUser()
+//        _userAvatarUrl.value = user?.let {
+//            storageManager.generateUserAvatarUrl(it.uid)
+//        }
+        val userId = authRepository.getUserId()
+        _userAvatarUrl.value = storageManager.generateUserAvatarUrl(userId?:"")
     }
 
     // Обновляем аватарку
@@ -159,9 +171,10 @@ class ProfileViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val user = authRepository.getCurrentUser()
-                if (user != null) {
-                    val success = storageManager.deleteUserAvatar(user.uid)
+                //val user = authRepository.getCurrentUser()
+                val userId = authRepository.getUserId()
+                if (userId != null) {
+                    val success = storageManager.deleteUserAvatar(userId)
 
                     if (success) {
                         // Обновляем URL на null
@@ -195,23 +208,42 @@ class ProfileViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val user = authRepository.getCurrentUser()
-                if (user == null) {
+                //val user = authRepository.getCurrentUser()
+                val userId = authRepository.getUserId()
+                if (userId == null) {
                     _deleteProfileState.value = UIState.Error("Пользователь не найден")
                     return@launch
                 }
 
-                val userId = user.uid
+
 
                 // 1. Удаляем аватарку пользователя из Supabase
                 storageManager.deleteUserAvatar(userId)
+                firebaseStorageManager.deleteUserAvatar(userId)
+
 
                 // 2. Удаляем всех соперников пользователя с их аватарками
-                val opponentIds = authRepository.getUserOpponents(userId)
-                opponentIds.forEach { opponentId ->
-                    boutRepository.deleteOpponent(opponentId)
-                    storageManager.deleteOpponentAvatar(userId, opponentId)
+                //val opponentIds = authRepository.getUserOpponents(userId)
+                println("DEBUG: начинаем удалять соперников")
+                val opponentIds = boutRepository.getOpponentsByUser(userId)
+                val (bouts,firebaseOpponetnIds) = firebaseBoutRepository.getHomeScreenData(userId)
+                val opponentsList = opponentIds.first()  // ← Берем только первый снимок данных
+                println("DEBUG: найдено соперников для удаления: ${opponentsList.size}")
+                firebaseOpponetnIds.forEach { opponent ->
+                    firebaseBoutRepository.deleteOpponent(opponent.id)
+                    firebaseStorageManager.deleteOpponentAvatar(userId,(opponent.roomId).toString())
                 }
+                opponentsList.forEach { opponent ->
+                    println("DEBUG: удаляем соперника ${opponent.id} - ${opponent.name}")
+                    boutRepository.deleteOpponent(opponent.id)
+                    storageManager.deleteOpponentAvatar(userId, opponent.id)
+                }
+                val sync = syncRepository.getSyncByUserId(userId)
+                if(sync!=null){
+                    syncRepository.deleteSync(sync.id)
+                }
+
+                println("DEBUG: закончили удалять соперников")
 
                 // 3. Удаляем аккаунт из Firebase Auth (удалит все данные через правила безопасности)
                 val result = authRepository.deleteAccount(currentPassword)

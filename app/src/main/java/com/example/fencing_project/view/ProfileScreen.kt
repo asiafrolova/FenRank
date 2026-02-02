@@ -1,6 +1,7 @@
 package com.example.fencing_project.view
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,8 +21,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +32,7 @@ import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,34 +68,52 @@ import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
 import com.canhub.cropper.CropImageView
 import com.example.fencing_project.R
+import com.example.fencing_project.data.local.LocalOpponent
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.view.components.BottomNavigationBar
 import com.example.fencing_project.viewmodel.ProfileViewModel
+import com.example.fencing_project.viewmodel.SyncViewModel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import org.apache.logging.log4j.spi.ThreadContextMapFactory.init
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
-                  pref: SharedPrefsManager, viewModel: ProfileViewModel = hiltViewModel()) {
+                  pref: SharedPrefsManager, viewModel: ProfileViewModel = hiltViewModel(),
+                  syncViewModel: SyncViewModel = hiltViewModel()) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     val updateState by viewModel.updateState.collectAsState()
-    val currentUser = remember { viewModel.getCurrentUser() }
+
     val userAvatarUrl by viewModel.userAvatarUrl.collectAsState()
-    println("DEBUG: userAvatarUrl = ${userAvatarUrl}")
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val coroutineScope = rememberCoroutineScope()
 
     var showImagePicker by remember { mutableStateOf(false) }
+
+    var forceRefresh by remember { mutableStateOf(0) }
+    var showExitConfirmationDialog by remember { mutableStateOf(false) }
 
     // Image Picker with Crop (как раньше)
     val cropLauncher = rememberLauncherForActivityResult(CropImageContract()) { result ->
         if (result.isSuccessful) {
             result.uriContent?.let { uri ->
+                selectedImageUri = uri
                 viewModel.updateUserAvatar(uri)
+
             }
         }
     }
+
+
+
 
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -115,6 +137,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
     LaunchedEffect(updateState) {
         when (updateState) {
             is UIState.Success -> {
+                forceRefresh++
                 // Snackbar или toast
                 viewModel.resetState()
             }
@@ -126,162 +149,244 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
         }
     }
 
-    Scaffold(
+    if (showExitConfirmationDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showExitConfirmationDialog = false
 
-        bottomBar = { BottomNavigationBar(navController = navController) }
-    ){
-            innerPadding ->
-        Box(
-    modifier = Modifier
-        .fillMaxSize()
-        .background(Color(25,25,33))
-        .padding(innerPadding),
-            contentAlignment = Alignment.TopCenter
-) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight(0.5f)
-                    .fillMaxWidth()
-                    .background(Color(139, 0, 0))
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(modifier = Modifier.padding(10.dp).size(230.dp)) {
-                    AsyncImage(
-                        model = "https://"+userAvatarUrl,
-                        contentDescription = "Аватар",
-                        modifier = Modifier.padding(
-                            top = 0.dp,
-                            end = 0.dp,
-                            start = 15.dp,
-                            bottom = 0.dp
-                        ).size(200.dp).clip(CircleShape)
-                            .border(3.dp, Color.White, shape = CircleShape),
-                        contentScale = ContentScale.Crop,
-                        error = painterResource(R.drawable.avatar),
-                        placeholder = painterResource(R.drawable.avatar)
+            },
+            title = {
+                Text(
+                    "Сохранение",
+                    color = Color.White
+                )
+            },
+            text = {
+                Text(
+                    "Может вы хотите сделать резервную копию данных перед выходом?",
+                    color = Color.White
+                )
+            },
+            containerColor = Color(61, 61, 70),
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        syncViewModel.startBackgroundSync()
+                        showExitConfirmationDialog = false
+                        viewModel.logout()
+                        pref.logout()
+                        navController.navigate("login")
+
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        containerColor = Color(139, 0, 0),
+                        contentColor = Color.White
                     )
-
-
-                    IconButton(
-                        onClick = {galleryLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},
-                        modifier = Modifier.padding(top = 160.dp, start = 160.dp).size(45.dp),
-                        shape = CircleShape,
-                        colors = IconButtonColors(
-                            containerColor = Color.White,
-                            contentColor = Color.Black,
-                            disabledContainerColor = Color(130, 130, 130),
-                            disabledContentColor = Color.Black
-                        ),
-                        content = {
-                            Icon(
-                                painter = painterResource(R.drawable.edit_image),
-                                contentDescription = "editImage",
-                                modifier = Modifier.size(30.dp)
-                            )
-                        })
-
+                ) {
+                    Text("Сделать резервную копию")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showExitConfirmationDialog = false
+                        viewModel.logout()
+                        pref.logout()
+                        navController.navigate("login")
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        containerColor = Color(44, 44, 51),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Выйти")
                 }
             }
+        )
+    }
 
+        Scaffold(
+
+            bottomBar = { BottomNavigationBar(navController = navController) }
+        ) { innerPadding ->
             Box(
-                modifier = Modifier.padding(end = 20.dp, start = 20.dp, bottom = 20.dp)
-                    .fillMaxWidth().fillMaxHeight(0.55f)
-                    .align(Alignment.BottomCenter)
-                    .dropShadow(
-                        shape = RoundedCornerShape(20.dp),
-                        shadow = androidx.compose.ui.graphics.shadow.Shadow(
-                            radius = 10.dp,
-                            spread = 6.dp,
-                            color = Color(0x40000000),
-                            offset = DpOffset(x = 4.dp, 4.dp)
-                        )
-                    )
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(31, 34, 43)),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(25, 25, 33))
+                    .padding(innerPadding),
                 contentAlignment = Alignment.TopCenter
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight(0.5f)
+                        .fillMaxWidth()
+                        .background(Color(139, 0, 0))
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(modifier = Modifier.padding(10.dp).size(230.dp)) {
+                        if (selectedImageUri != null) {
+                            AsyncImage(
+                                model = selectedImageUri,
+                                contentDescription = "Аватар",
+                                modifier = Modifier.padding(
+                                    top = 0.dp,
+                                    end = 0.dp,
+                                    start = 15.dp,
+                                    bottom = 0.dp
+                                ).size(200.dp).clip(CircleShape)
+                                    .border(3.dp, Color.White, shape = CircleShape),
+                                contentScale = ContentScale.Crop,
+                                error = painterResource(R.drawable.avatar),
+                                placeholder = painterResource(R.drawable.avatar),
 
 
-                @Composable
-                fun OptionItem(
-                    icon: Painter,
-                    title: String,
-                    onClick: () -> Unit = {},
+                                )
+                        } else {
+                            AsyncImage(
+                                model = userAvatarUrl,
+                                contentDescription = "Аватар",
+                                modifier = Modifier.padding(
+                                    top = 0.dp,
+                                    end = 0.dp,
+                                    start = 15.dp,
+                                    bottom = 0.dp
+                                ).size(200.dp).clip(CircleShape)
+                                    .border(3.dp, Color.White, shape = CircleShape),
+                                contentScale = ContentScale.Crop,
+                                error = painterResource(R.drawable.avatar),
+                                placeholder = painterResource(R.drawable.avatar),
+
+
+                                )
+                        }
+
+
+                        IconButton(
+                            onClick = {
+                                galleryLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                            modifier = Modifier.padding(top = 160.dp, start = 160.dp).size(45.dp),
+                            shape = CircleShape,
+                            colors = IconButtonColors(
+                                containerColor = Color.White,
+                                contentColor = Color.Black,
+                                disabledContainerColor = Color(130, 130, 130),
+                                disabledContentColor = Color.Black
+                            ),
+                            content = {
+                                Icon(
+                                    painter = painterResource(R.drawable.edit_image),
+                                    contentDescription = "editImage",
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            })
+
+                    }
+                }
+
+                Box(
+                    modifier = Modifier.padding(end = 20.dp, start = 20.dp, bottom = 20.dp)
+                        .fillMaxWidth().fillMaxHeight(0.55f)
+                        .align(Alignment.BottomCenter)
+                        .dropShadow(
+                            shape = RoundedCornerShape(20.dp),
+                            shadow = androidx.compose.ui.graphics.shadow.Shadow(
+                                radius = 10.dp,
+                                spread = 6.dp,
+                                color = Color(0x40000000),
+                                offset = DpOffset(x = 4.dp, 4.dp)
+                            )
+                        )
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(31, 34, 43)),
+                    contentAlignment = Alignment.TopCenter
                 ) {
 
-                    Button(
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonColors(
-                            containerColor = Color(31,34,43),
-                            contentColor = Color.White,
-                            disabledContainerColor =  Color(25,25,33),
-                            disabledContentColor = Color.White
-                        ),
-                        onClick={onClick()},
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(5.dp)
 
+                    @Composable
+                    fun OptionItem(
+                        icon: Painter,
+                        title: String,
+                        onClick: () -> Unit = {},
                     ) {
 
-                        Icon(
-                            painter = icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = Color.White
+                        Button(
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonColors(
+                                containerColor = Color(31, 34, 43),
+                                contentColor = Color.White,
+                                disabledContainerColor = Color(25, 25, 33),
+                                disabledContentColor = Color.White
+                            ),
+                            onClick = { onClick() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(5.dp)
+
+                        ) {
+
+                            Icon(
+                                painter = icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = title,
+                                fontSize = 17.sp,
+                                color = Color.White,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.TopCenter),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Top
+                    ) {
+                        OptionItem(
+                            icon = painterResource(R.drawable.change_profile),
+                            title = "Редактировать профиль",
+                            onClick = { navController.navigate("profile_edit") }
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = title,
-                            fontSize = 17.sp,
-                            color = Color.White,
-                            modifier = Modifier.weight(1f)
+
+                        OptionItem(
+                            icon = painterResource(R.drawable.statistics), title = "Статистика",
+                            onClick = { navController.navigate("statistics") }
+                        )
+                        OptionItem(
+                            icon = painterResource(R.drawable.settings), title = "Настройки",
+                            onClick = { navController.navigate("settings") }
+                        )
+                    }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom
+                    ) {
+                        OptionItem(
+                            icon = painterResource(R.drawable.logout), title = "Выйти из аккаунта",
+                            onClick = {
+                                if(!pref.isOffline()) {
+                                    showExitConfirmationDialog = true
+                                }else{
+                                    viewModel.logout()
+                                    pref.logout()
+                                    navController.navigate("login")
+                                }
+                            }
                         )
                     }
                 }
-                Column(modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Top
-                ) {
-                    OptionItem(
-                        icon = painterResource(R.drawable.change_profile),
-                        title = "Редактировать профиль",
-                        onClick = {navController.navigate("profile_edit")}
-                        )
-//                    OptionItem(
-//                        icon = painterResource(R.drawable.change_password),
-//                        title = "Сменить пароль",
-//                        onClick = {navController.navigate("change_password")}
-//                        )
-                    OptionItem(
-                        icon = painterResource(R.drawable.statistics), title = "Статистика",
-                        onClick = {navController.navigate("statistics")}
-                        )
-                    OptionItem(
-                        icon = painterResource(R.drawable.settings), title = "Настройки",
-                        onClick = {navController.navigate("settings")}
-                        )
-                }
-                Column(modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Bottom
-                ) {
-                    OptionItem(
-                        icon = painterResource(R.drawable.logout), title = "Выйти из аккаунта",
-                        onClick = {
-                            viewModel.logout()
-                            pref.logout()
-                            navController.navigate("login")}
-                        )
-                }
             }
-        }
 
+        }
     }
-}

@@ -8,8 +8,8 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
-import com.example.fencing_project.data.model.Bout
-import com.example.fencing_project.data.model.Opponent
+import com.example.fencing_project.data.local.LocalBout
+import com.example.fencing_project.data.local.LocalOpponent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -30,8 +30,8 @@ class ExcelExportService @Inject constructor(
 
     // ExcelExportService.kt
     suspend fun exportToExcel(
-        opponents: List<com.example.fencing_project.data.model.Opponent>,
-        bouts: List<com.example.fencing_project.data.model.Bout>,
+        opponents: List<LocalOpponent>,
+        bouts: List<LocalBout>,
         fileName: String = generateFileName()
     ): String? {
         return withContext(Dispatchers.IO) {
@@ -65,7 +65,7 @@ class ExcelExportService @Inject constructor(
 
     private fun createOpponentsSheet(
         workbook: Workbook,
-        opponents: List<com.example.fencing_project.data.model.Opponent>,
+        opponents: List<LocalOpponent>,
         headerStyle: CellStyle
     ) {
         val sheet = workbook.createSheet("Соперники")
@@ -74,7 +74,7 @@ class ExcelExportService @Inject constructor(
         val headerRow = sheet.createRow(0)
         val headers = listOf(
             "ID", "Имя", "Дата создания", "Ведущая рука", "Тип оружия",
-            "Комментарий", "Аватар URL", "Создал", "Всего боев",
+            "Комментарий", /*"Аватар URL",*/ "Создал", "Всего боев",
             "Победы пользователя", "Поражения пользователя", "Ничьи",
             "Всего нанесено уколов", "Всего получено уколов", "Дата последнего боя"
         )
@@ -90,21 +90,21 @@ class ExcelExportService @Inject constructor(
         opponents.forEachIndexed { rowIndex, opponent ->
             val row = sheet.createRow(rowIndex + 1)
 
-            row.createCell(0).setCellValue(opponent.id)
+            row.createCell(0).setCellValue((opponent.id).toDouble())
             row.createCell(1).setCellValue(opponent.name)
             row.createCell(2).setCellValue(formatDate(opponent.createdAt))
             row.createCell(3).setCellValue(opponent.weaponHand)
             row.createCell(4).setCellValue(opponent.weaponType)
             row.createCell(5).setCellValue(opponent.comment ?: "")
-            row.createCell(6).setCellValue(opponent.avatarUrl ?: "")
-            row.createCell(7).setCellValue(opponent.createdBy)
-            row.createCell(8).setCellValue(opponent.totalBouts.toDouble())
-            row.createCell(9).setCellValue(opponent.userWins.toDouble())
-            row.createCell(10).setCellValue(opponent.opponentWins.toDouble())
-            row.createCell(11).setCellValue(opponent.draws.toDouble())
-            row.createCell(12).setCellValue(opponent.totalUserScore.toDouble())
-            row.createCell(13).setCellValue(opponent.totalOpponentScore.toDouble())
-            row.createCell(14).setCellValue(formatDate(opponent.lastBoutDate))
+            //row.createCell(6).setCellValue(opponent.avatarPath ?: "")
+            row.createCell(7-1).setCellValue(opponent.createdBy)
+            row.createCell(8-1).setCellValue(opponent.totalBouts.toDouble())
+            row.createCell(9-1).setCellValue(opponent.userWins.toDouble())
+            row.createCell(10-1).setCellValue(opponent.opponentWins.toDouble())
+            row.createCell(11-1).setCellValue(opponent.draws.toDouble())
+            row.createCell(12-1).setCellValue(opponent.totalUserScore.toDouble())
+            row.createCell(13-1).setCellValue(opponent.totalOpponentScore.toDouble())
+            row.createCell(14-1).setCellValue(formatDate(opponent.lastBoutDate))
         }
 
         // Авторазмер колонок
@@ -115,7 +115,7 @@ class ExcelExportService @Inject constructor(
 
     private fun createBoutsSheet(
         workbook: Workbook,
-        bouts: List<com.example.fencing_project.data.model.Bout>,
+        bouts: List<LocalBout>,
         headerStyle: CellStyle,
         dateStyle: CellStyle
     ) {
@@ -139,8 +139,8 @@ class ExcelExportService @Inject constructor(
         bouts.forEachIndexed { rowIndex, bout ->
             val row = sheet.createRow(rowIndex + 1)
 
-            row.createCell(0).setCellValue(bout.id)
-            row.createCell(1).setCellValue(bout.opponentId)
+            row.createCell(0).setCellValue((bout.id).toDouble())
+            row.createCell(1).setCellValue((bout.opponentId).toDouble())
             row.createCell(2).setCellValue(bout.authorId)
             row.createCell(3).setCellValue(bout.userScore.toDouble())
             row.createCell(4).setCellValue(bout.opponentScore.toDouble())

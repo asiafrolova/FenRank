@@ -23,8 +23,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.fencing_project.R
-import com.example.fencing_project.data.model.Bout
-import com.example.fencing_project.data.model.Opponent
+import com.example.fencing_project.data.local.LocalBout
+import com.example.fencing_project.data.local.LocalOpponent
+import com.example.fencing_project.utils.SharedPrefsManager
+
+
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.view.components.BottomNavigationBar
 import com.example.fencing_project.viewmodel.HomeViewModel
@@ -34,10 +37,12 @@ import java.util.*
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    pref: SharedPrefsManager
 ) {
 
-    val userId: String? = viewModel.getCurrentUser()?.uid
+
+    val userId: String? = pref.getUserId()
     LaunchedEffect(key1 = userId) {
         if (userId != null && userId.isNotBlank()) {
             println("DEBUG: Загружаем данные для userId: $userId")
@@ -54,7 +59,7 @@ fun HomeScreen(
     val topOpponents = remember(opponentsState) {
         when (opponentsState) {
             is UIState.Success -> {
-                val opponents = (opponentsState as UIState.Success<List<Opponent>>).data
+                val opponents = (opponentsState as UIState.Success<List<LocalOpponent>>).data
                 // Сортируем по количеству боев (totalBouts)
                 opponents.sortedByDescending { it.totalBouts }
                     .take(3) // Берем топ-3
@@ -67,7 +72,7 @@ fun HomeScreen(
     val latestBouts = remember(boutsState) {
         when (boutsState) {
             is UIState.Success -> {
-                val bouts = (boutsState as UIState.Success<List<Bout>>).data
+                val bouts = (boutsState as UIState.Success<List<LocalBout>>).data
                 // Сортируем по дате (новые сверху) и берем первые 5
                 bouts.sortedByDescending { it.date }
                     .take(5)
@@ -140,7 +145,9 @@ fun HomeScreen(
                     } else {
                         OpponentsListHome(
                             opponents = topOpponents,
-                            onOpponentClick = { opponent ->
+                            onOpponentClick = {
+                                opponent ->
+                                println("DEBUG: opponentId in Home = ${opponent.id}")
                                 navController.navigate("edit_opponent/${opponent.id}")
                             }
                         )
@@ -198,7 +205,7 @@ fun HomeScreen(
                         // Получаем список соперников
                         val opponentsMap = when (opponentsState) {
                             is UIState.Success -> {
-                                val opponentsList = (opponentsState as UIState.Success<List<Opponent>>).data
+                                val opponentsList = (opponentsState as UIState.Success<List<LocalOpponent>>).data
                                 opponentsList.associateBy { it.id }
                             }
                             else -> emptyMap()
@@ -206,7 +213,7 @@ fun HomeScreen(
 
                         BoutsListHome(
                             bouts = latestBouts,
-                            opponents = (opponentsState as? UIState.Success<List<Opponent>>)?.data ?: emptyList(),
+                            opponents = (opponentsState as? UIState.Success<List<LocalOpponent>>)?.data ?: emptyList(),
                             onBoutClick = { bout ->
                                 navController.navigate("edit_bout/${bout.id}")
                             }
@@ -237,8 +244,8 @@ fun HomeScreen(
 // Список соперников для домашнего экрана (без изменений из OpponentsScreen)
 @Composable
 private fun OpponentsListHome(
-    opponents: List<Opponent>,
-    onOpponentClick: (Opponent) -> Unit,
+    opponents: List<LocalOpponent>,
+    onOpponentClick: (LocalOpponent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -257,9 +264,9 @@ private fun OpponentsListHome(
 // Список боев для домашнего экрана (без изменений из OpponentsScreen)
 @Composable
 private fun BoutsListHome(
-    bouts: List<Bout>,
-    opponents: List<Opponent>,
-    onBoutClick: (Bout) -> Unit,
+    bouts: List<LocalBout>,
+    opponents: List<LocalOpponent>,
+    onBoutClick: (LocalBout) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Группируем бои по датам
@@ -308,7 +315,7 @@ private fun EmptyStateOpponents(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
-            painter = painterResource(R.drawable.bout),
+            painter = painterResource(R.drawable.fencing_mask),
             contentDescription = "Пусто",
             tint = Color(100, 100, 100),
             modifier = Modifier.size(80.dp)

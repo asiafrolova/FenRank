@@ -3,6 +3,7 @@ package com.example.fencing_project.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.fencing_project.data.local.LocalBoutRepository
 import com.example.fencing_project.data.repository.BoutRepository
 import com.example.fencing_project.utils.ExcelExportService
 import com.example.fencing_project.utils.UIState
@@ -14,7 +15,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ExportViewModel @Inject constructor(
-    private val boutRepository: BoutRepository,
+    //private val boutRepository: BoutRepository,
+    private val boutRepository: LocalBoutRepository,
     private val excelExportService: ExcelExportService
 ) : ViewModel() {
 

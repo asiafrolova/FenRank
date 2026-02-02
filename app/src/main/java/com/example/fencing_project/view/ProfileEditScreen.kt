@@ -53,7 +53,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.fencing_project.R
-import com.example.fencing_project.data.model.Bout
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.view.components.BottomNavigationBar
@@ -309,6 +308,8 @@ fun ProfileEditScreen(navController: NavController,
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp),
                     shape = RoundedCornerShape(20.dp),
+                    readOnly = pref.isOffline()
+
 
                 )
                 OutlinedTextField(
@@ -341,6 +342,7 @@ fun ProfileEditScreen(navController: NavController,
                             )
                         }
                     },
+                    readOnly = pref.isOffline()
                 )
                 Button(
 
@@ -370,7 +372,7 @@ fun ProfileEditScreen(navController: NavController,
                                 }
                             }
                         } },
-                    enabled = updateEmailState !is UIState.Loading,
+                    enabled = (updateEmailState !is UIState.Loading)&&(!pref.isOffline()),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp, vertical = 10.dp),
@@ -415,6 +417,7 @@ fun ProfileEditScreen(navController: NavController,
                             )
                         }
                     },
+                    readOnly = pref.isOffline()
                     )
                 OutlinedTextField(
                     value = newPassword,
@@ -446,6 +449,7 @@ fun ProfileEditScreen(navController: NavController,
                             )
                         }
                     },
+                    readOnly = pref.isOffline()
 
                 )
                 OutlinedTextField(
@@ -478,6 +482,7 @@ fun ProfileEditScreen(navController: NavController,
                             )
                         }
                     },
+                    readOnly = pref.isOffline()
 
                 )
                 val passwordError = remember(newPassword, confirmNewPassword) {
@@ -506,7 +511,8 @@ fun ProfileEditScreen(navController: NavController,
                         .fillMaxWidth(),
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = Color.White
-                    )
+                    ),
+                    enabled = !pref.isOffline()
 
                 ) {
                     Text(
@@ -539,7 +545,7 @@ fun ProfileEditScreen(navController: NavController,
                                 }
                             }
                         } },
-                    enabled = updatePasswordState !is UIState.Loading && passwordError == null,
+                    enabled = (updatePasswordState !is UIState.Loading && passwordError == null && !pref.isOffline()),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp, vertical = 10.dp),

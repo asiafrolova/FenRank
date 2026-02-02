@@ -4,15 +4,15 @@ import com.example.fencing_project.data.model.Bout
 import com.example.fencing_project.data.model.Opponent
 import com.example.fencing_project.utils.SupabaseStorageManager
 import com.google.firebase.database.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class BoutRepository @Inject constructor(
     private val database: FirebaseDatabase,
     private val storageManager: SupabaseStorageManager,
-) {
+
+    ) {
+
 
     private val boutsRef: DatabaseReference
         get() = database.getReference("bouts")
@@ -235,24 +235,20 @@ class BoutRepository @Inject constructor(
         }
     }
     suspend fun updateOpponent(
-        opponentId: String,
-        name: String,
-        weaponHand: String,
-        weaponType: String,
-        comment: String,
-        avatarUrl: String
+        opponent: Opponent
     ) {
         try {
             val updates = mapOf<String, Any>(
-                "name" to name,
-                "weaponHand" to weaponHand,
-                "weaponType" to weaponType,
-                "comment" to comment,
-                "avatarUrl" to avatarUrl
+                "roomId" to opponent.roomId,
+                "name" to opponent.name,
+                "weaponHand" to opponent.weaponHand,
+                "weaponType" to opponent.weaponType,
+                "comment" to opponent.comment,
+                "avatarUrl" to opponent.avatarUrl
             )
 
-            opponentsRef.child(opponentId).updateChildren(updates).await()
-            println("DEBUG: Соперник обновлен: $opponentId")
+            opponentsRef.child(opponent.id).updateChildren(updates).await()
+            println("DEBUG: Соперник обновлен: ${opponent.id}")
         } catch (e: Exception) {
             println("DEBUG: Ошибка обновления соперника: ${e.message}")
             throw e
@@ -291,6 +287,34 @@ class BoutRepository @Inject constructor(
             null
         }
     }
+    suspend fun getOpponentByRoomId(roomId: Long, userId: String): Opponent? {
+        return try {
+            println("DEBUG: Ищем соперника по roomId: $roomId для пользователя: $userId")
+
+            // Ищем всех соперников пользователя
+            val opponentsSnapshot = opponentsRef
+                .orderByChild("createdBy")
+                .equalTo(userId)
+                .get()
+                .await()
+
+            // Вручную ищем по roomId
+            for (snapshot in opponentsSnapshot.children) {
+                val opponent = snapshot.getValue(Opponent::class.java)
+                if (opponent != null && opponent.roomId == roomId) {
+                    println("DEBUG: Найден соперник: ${opponent.name}")
+                    return opponent
+                }
+            }
+
+            println("DEBUG: Соперник с roomId: $roomId не найден")
+            null
+
+        } catch (e: Exception) {
+            println("DEBUG: Ошибка поиска по roomId: ${e.message}")
+            null
+        }
+    }
     suspend fun deleteOpponentWithAvatar(opponentId: String, userId: String, opponentAvatarUrl: String? = null): Boolean {
         return try {
             println("DEBUG: Начинаем удаление соперника $opponentId с аватаркой")
@@ -320,5 +344,9 @@ class BoutRepository @Inject constructor(
             false
         }
     }
+
+
+
+
 
 }

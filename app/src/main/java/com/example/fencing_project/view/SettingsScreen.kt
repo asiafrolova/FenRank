@@ -1,6 +1,8 @@
 package com.example.fencing_project.view
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -50,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -59,27 +63,38 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.fencing_project.R
+
 import com.example.fencing_project.utils.SharedPrefsManager
+
+
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.view.components.ExportDataDialog
 import com.example.fencing_project.view.components.ImportDataDialog
+import com.example.fencing_project.view.components.RestoreDataDialog
 import com.example.fencing_project.viewmodel.ProfileViewModel
+import com.example.fencing_project.viewmodel.SyncViewModel
 import io.github.jan.supabase.gotrue.providers.invoke
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavController,
                          pref: SharedPrefsManager,
                    viewModel: ProfileViewModel= hiltViewModel(),
+                   syncViewModel : SyncViewModel = hiltViewModel()
                   ){
 
 
 
 
 
+
+
+
+    var showRestoreDialog by remember { mutableStateOf(false) }
 
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
@@ -103,7 +118,25 @@ fun SettingsScreen(navController: NavController,
     var showPasswordDialog by remember { mutableStateOf(false) }
 
     val deleteAccountState by viewModel.deleteProfileState.collectAsState()
-    val isLoading = deleteAccountState is UIState.Loading
+
+
+    val syncState by syncViewModel.syncState.collectAsState()
+    val isLoading = deleteAccountState is UIState.Loading || syncState is UIState.Loading
+
+            LaunchedEffect(syncState) {
+        if (syncState is UIState.Success || syncState is UIState.Error) {
+            // Автоматически возвращаемся через 3 секунды
+            // Можно убрать, если не нужно
+        }
+    }
+    if (showRestoreDialog) {
+        RestoreDataDialog(
+            onDismiss = { showRestoreDialog = false }
+        )
+    }
+
+
+
     if (showExportDialog && userId != null) {
         ExportDataDialog(
             onDismiss = { showExportDialog = false },
@@ -425,36 +458,15 @@ fun SettingsScreen(navController: NavController,
                         disabledContainerColor = Color(133, 133, 133).copy(alpha = 0.5f),
                         disabledContentColor = Color.White.copy(alpha = 0.5f)
                     ),
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(20.dp),
+                    enabled = !pref.isOffline()
                 ) {
                     Text("Удалить профиль", fontSize = 15.sp, modifier = Modifier.padding(5.dp))
 
                 }
-                if (isLoading) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.5f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(50.dp),
-                                color = Color(139, 0, 0),
-                                strokeWidth = 4.dp
-                            )
-                            Text(
-                                text = "Сохранение..."
-                                ,
-                                color = Color.White,
-                                fontSize = 16.sp
-                            )
-                        }
-                    }
-                }
+
+
+
 
 
                 Card(
@@ -482,6 +494,7 @@ fun SettingsScreen(navController: NavController,
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
+                            enabled = !pref.isOffline(),
                             onClick = { showExportDialog = true },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
@@ -524,6 +537,7 @@ fun SettingsScreen(navController: NavController,
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
+                            enabled = !pref.isOffline(),
                             onClick = { showImportDialog = true },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
@@ -539,6 +553,145 @@ fun SettingsScreen(navController: NavController,
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Импорт из Excel")
                         }
+                    }
+                }
+
+
+
+
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(44, 44, 51)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Создать резервную копию",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Загрузка данных в облако начнется в фновом режиме",
+                            color = Color.White,
+                            fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            enabled = !pref.isOffline(),
+                            onClick = { syncViewModel.startBackgroundSync() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(139, 0, 0),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.sync), // Добавьте иконку
+                                contentDescription = "Фоновая синхронизация",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Запустить резервное копирование")
+                        }
+                    }
+                }
+
+
+
+
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(44, 44, 51)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Автоматическая синхронизация",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Настройте автоматическую синхронизацию по расписанию",
+                            color = Color.White,
+                            fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            enabled = !pref.isOffline(),
+                            onClick = { navController.navigate("sync") },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(139, 0, 0),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.sync),
+                                contentDescription = "Расписание",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Настроить расписание")
+                        }
+                    }
+                }
+                Button(
+                    onClick = {
+                        showRestoreDialog = true},
+                    //syncViewModel.loadDataFromCloud() },
+                    modifier = Modifier.padding(horizontal = 10.dp).fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(44, 44, 51)
+                    ),
+                    shape = RoundedCornerShape(20.dp),
+                    enabled = syncState !is UIState.Loading && !pref.isOffline()
+                ) {
+                    Text("Загрузить резервную копию", fontSize = 16.sp)
+                }
+
+
+
+            }
+
+
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(50.dp),
+                            color = Color(139, 0, 0),
+                            strokeWidth = 4.dp
+                        )
+                        Text(
+                            text = "Сохранение..."
+                            ,
+                            color = Color.White,
+                            fontSize = 16.sp
+                        )
                     }
                 }
             }

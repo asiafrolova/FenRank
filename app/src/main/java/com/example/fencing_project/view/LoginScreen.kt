@@ -88,11 +88,19 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
                 val successState = uiState as LoginUiState.Success
                 // Сохраняем данные пользователя
                 pref.saveLoginState(
-                    userId = successState.userId,    // Firebase UID
-                    email = email,
-                    password = password
+                    userId = successState.userId
                 )
                 println("DEBUG: Сохранен userId: ${successState.userId}")
+                navController.navigate(Routes.Home.route) {
+                    popUpTo(Routes.Login.route) { inclusive = true }
+                }
+                viewModel.resetState()
+            }
+            is LoginUiState.Offline -> {
+
+                // Сохраняем данные пользователя
+                pref.saveLocalLogin()
+                println("DEBUG: Пользователь вошел оффлайн")
                 navController.navigate(Routes.Home.route) {
                     popUpTo(Routes.Login.route) { inclusive = true }
                 }
@@ -293,16 +301,30 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
                         fontSize = 14.sp,
                     )
                 }}
-                Text(
-                    stringResource(R.string.no_account_registr),
-                    modifier = Modifier
-                        .padding(top = 10.dp, bottom = 10.dp)
-                        .align(Alignment.BottomCenter)
-                        .clickable {
-                            navController.navigate(Routes.Register.route)
-                        },
-                    color = Color.White,
-                    fontSize = 15.sp)
+                Column(modifier = Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Войти гостем",
+                        modifier = Modifier
+                            .padding(top = 10.dp, bottom = 10.dp)
+
+                            .clickable {
+                                viewModel.loginOffline()
+                            },
+                        color = Color.White,
+                        fontSize = 15.sp
+                    )
+                    Text(
+                        stringResource(R.string.no_account_registr),
+                        modifier = Modifier
+                            .padding(top = 10.dp, bottom = 10.dp)
+
+                            .clickable {
+                                navController.navigate(Routes.Register.route)
+                            },
+                        color = Color.White,
+                        fontSize = 15.sp
+                    )
+                }
 
             }
         }

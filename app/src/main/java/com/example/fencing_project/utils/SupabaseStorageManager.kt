@@ -30,7 +30,7 @@ class SupabaseStorageManager @Inject constructor(
 
     suspend fun uploadOpponentAvatar(
         userId: String,
-        opponentId: String,
+        opponentId: Long,
         imageUri: Uri
     ): String? {
         return withContext(Dispatchers.IO) {
@@ -67,7 +67,7 @@ class SupabaseStorageManager @Inject constructor(
         }
     }
 
-    suspend fun getPublicUrl(userId: String, opponentId: String): String {
+    suspend fun getPublicUrl(userId: String, opponentId: Long): String {
         return withContext(Dispatchers.IO) {
             try {
                 val fileName = "$opponentId.jpg"
@@ -250,6 +250,118 @@ class SupabaseStorageManager @Inject constructor(
             }
         }
     }
+
+    suspend fun downloadOpponentAvatar(
+        userId: String,
+        opponentId: String,
+        saveToLocalPath: String,
+
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                println("DEBUG: Загружаем аватарку соперника из Supabase: userId=$userId, opponentId=$opponentId")
+
+                val fileName = "$opponentId.jpg"
+                val filePath = "$userId/$fileName"
+
+                // Скачиваем из Supabase Storage
+                val bytes = storage.from(BUCKET_NAME).downloadPublic(path=filePath)
+
+                // Сохраняем локально
+                val file = File(saveToLocalPath)
+                file.parentFile?.mkdirs() // Создаем директории если нужно
+
+                FileOutputStream(file).use { outputStream ->
+                    outputStream.write(bytes)
+                }
+
+                println("DEBUG: Аватарка успешно загружена и сохранена: ${file.absolutePath}")
+                true
+
+            } catch (e: Exception) {
+                // Файл может не существовать - это нормально
+                if (e.message?.contains("not found", ignoreCase = true) == true ||
+                    e.message?.contains("404", ignoreCase = true) == true) {
+                    println("DEBUG: Аватарка не найдена в Supabase для opponentId: $opponentId")
+                    false
+                } else {
+                    println("DEBUG: Ошибка загрузки аватарки: ${e.message}")
+                    e.printStackTrace()
+                    false
+                }
+            }
+        }
+    }
+
+    suspend fun downloadUserAvatar(
+        userId: String,
+        saveToLocalPath: String
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                println("DEBUG: Загружаем аватарку пользователя из Supabase: userId=$userId")
+
+                val filePath = "$userId/avatar.jpg"
+
+                // Скачиваем из Supabase Storage
+                val bytes = storage.from(USER_BUCKET_NAME).downloadPublic(filePath)
+
+                // Сохраняем локально
+                val file = File(saveToLocalPath)
+                file.parentFile?.mkdirs()
+
+                FileOutputStream(file).use { outputStream ->
+                    outputStream.write(bytes)
+                }
+
+                println("DEBUG: Аватарка пользователя загружена: ${file.absolutePath}")
+                true
+
+            } catch (e: Exception) {
+                // Файл может не существовать - это нормально
+                if (e.message?.contains("not found", ignoreCase = true) == true ||
+                    e.message?.contains("404", ignoreCase = true) == true) {
+                    println("DEBUG: Аватарка пользователя не найдена в Supabase")
+                    false
+                } else {
+                    println("DEBUG: Ошибка загрузки аватарки пользователя: ${e.message}")
+                    false
+                }
+            }
+        }
+    }
+
+//    suspend fun checkAvatarExists(
+//        userId: String,
+//        opponentId: Long? = null
+//    ): Boolean {
+//        return withContext(Dispatchers.IO) {
+//            try {
+//                if (opponentId != null) {
+//                    // Проверяем аватарку соперника
+//                    val fileName = "$opponentId.jpg"
+//                    val filePath = "$userId/$fileName"
+//
+//                    // Пробуем получить информацию о файле
+//                    storage.from(BUCKET_NAME).stat(filePath)
+//                    true
+//                } else {
+//                    // Проверяем аватарку пользователя
+//                    val filePath = "$userId/avatar.jpg"
+//                    storage.from(USER_BUCKET_NAME).stat(filePath)
+//                    true
+//                }
+//            } catch (e: Exception) {
+//                if (e.message?.contains("not found", ignoreCase = true) == true ||
+//                    e.message?.contains("404", ignoreCase = true) == true) {
+//                    false
+//                } else {
+//                    println("DEBUG: Ошибка проверки аватарки: ${e.message}")
+//                    false
+//                }
+//            }
+//        }
+//    }
 
 
 

@@ -1,5 +1,6 @@
 package com.example.fencing_project.view.components
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ sealed class BottomNavItem(
     object Opponents : BottomNavItem("opponents", R.string.opponents, iconResId = R.drawable.folder_ic)
     object Profile : BottomNavItem("profile", R.string.profile, iconResId = R.drawable.profile_ic)
 }
+@SuppressLint("SuspiciousIndentation")
 @Preview
 @Composable
 fun BottomNavigationBar(navController: NavController = rememberNavController(),

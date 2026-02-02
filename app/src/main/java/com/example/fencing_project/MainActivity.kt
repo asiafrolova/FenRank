@@ -6,28 +6,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.core.content.edit
-import androidx.navigation.NavController
-import androidx.navigation.NavHost
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -35,7 +19,7 @@ import com.example.fencing_project.ui.theme.Fencing_projectTheme
 import com.example.fencing_project.utils.SharedPrefsManager
 
 import com.example.fencing_project.view.BoutEditScreen
-import com.example.fencing_project.view.ChangePasswordScreen
+
 import com.example.fencing_project.view.ChoiceAddScreen
 import com.example.fencing_project.view.HomeScreen
 import com.example.fencing_project.view.LoginScreen
@@ -46,6 +30,7 @@ import com.example.fencing_project.view.ProfileScreen
 import com.example.fencing_project.view.RegisterScreen
 import com.example.fencing_project.view.SettingsScreen
 import com.example.fencing_project.view.StatisticsScreen
+import com.example.fencing_project.view.SyncScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 sealed class Routes(val route: String) {
@@ -65,6 +50,7 @@ sealed class Routes(val route: String) {
     object ChangePassword : Routes("change_password")
     object Settings: Routes("settings")
     object Statistics : Routes("statistics")
+    object Sync : Routes("sync")
 }
 
 @AndroidEntryPoint
@@ -97,7 +83,7 @@ class MainActivity : ComponentActivity() {
                 composable(Routes.Home.route) {
                     HomeScreen(
                         navController = navController,
-
+                        pref = sharedPrefs
                     )
                 }
                 composable(Routes.Profile.route) {
@@ -111,7 +97,7 @@ class MainActivity : ComponentActivity() {
                 }
                 composable(Routes.AddBoutScreen.route) {
                     //AddBoutScreen(navController = navController, pref = sharedPrefs)
-                    BoutEditScreen(navController=navController, pref = sharedPrefs)
+                    BoutEditScreen(navController =navController, pref = sharedPrefs)
                 }
                 composable (Routes.AddOpponentScreen.route){
                     //AddOpponentScreen(navController = navController, pref = sharedPrefs)
@@ -122,15 +108,16 @@ class MainActivity : ComponentActivity() {
                     BoutEditScreen(
                         navController = navController,
                         pref = sharedPrefs,
-                        boutId = boutId // Передаем ID для редактирования
+                        boutId = (boutId?:"0").toLong()// Передаем ID для редактирования
                     )
                 }
                 composable(Routes.EditOpponent.route) { backStackEntry ->
                     val opponentId = backStackEntry.arguments?.getString("opponentId")
+                    println("DEBUG: opponentId in MainActivity = $opponentId")
                     OpponentEditScreen(
                         navController = navController,
                         pref = sharedPrefs,
-                        opponentId = opponentId // Передаем ID для редактирования
+                        opponentId = ((opponentId)?:"0").toLong() // Передаем ID для редактирования
                     )
                 }
                 composable(Routes.AddBoutWithOpponent.route) { backStackEntry ->
@@ -138,20 +125,21 @@ class MainActivity : ComponentActivity() {
                     BoutEditScreen(
                         navController = navController,
                         pref = sharedPrefs,
-                        startOpponentId = opponentId // Передаем ID для редактирования
+                        startOpponentId = (opponentId?:"0").toLong() as Long? // Передаем ID для редактирования
                     )
                 }
                 composable (Routes.ProfileEdit.route){
                     ProfileEditScreen(navController = navController, pref = sharedPrefs)
                 }
-                composable (Routes.ChangePassword.route){
-                    ChangePasswordScreen(navController = navController, pref = sharedPrefs)
-                }
+
                 composable (Routes.Settings.route){
                     SettingsScreen(navController = navController, pref = sharedPrefs)
                 }
                 composable (Routes.Statistics.route){
                     StatisticsScreen(navController = navController, pref = sharedPrefs)
+                }
+                composable (Routes.Sync.route){
+                    SyncScreen(navController = navController, pref = sharedPrefs)
                 }
             }
         }

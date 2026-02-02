@@ -55,8 +55,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.fencing_project.R
-import com.example.fencing_project.data.model.Bout
-import com.example.fencing_project.data.model.Opponent
+import com.example.fencing_project.data.local.LocalBout
+import com.example.fencing_project.data.local.LocalOpponent
+
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.viewmodel.HomeViewModel
@@ -71,7 +72,7 @@ private data class StatisticsData(
     val opponentScore: Int = 0,
     val byWeaponHand: Map<String, StatsByCategory> = emptyMap(),
     val byWeaponType: Map<String, StatsByCategory> = emptyMap(),
-    val byOpponent: Map<String, OpponentStats> = emptyMap()
+    val byOpponent: Map<Long, OpponentStats> = emptyMap()
 )
 
 private data class StatsByCategory(
@@ -84,7 +85,7 @@ private data class StatsByCategory(
 )
 
 private data class OpponentStats(
-    val opponentId: String,
+    val opponentId: Long,
     val opponentName: String,
     val bouts: Int = 0,
     val victories: Int = 0,
@@ -96,17 +97,17 @@ private data class OpponentStats(
 
 // Функция для расчета статистики (вынесена из Composable)
 private fun calculateStatistics(
-    boutsState: UIState<List<Bout>>,
-    opponentsState: UIState<List<Opponent>>,
+    boutsState: UIState<List<LocalBout>>,
+    opponentsState: UIState<List<LocalOpponent>>,
     selectedYear: Int,
     selectedMonth: Int,
-    selectedOpponentId: String?
+    selectedOpponentId: Long?
 ): StatisticsData {
     return when (boutsState) {
         is UIState.Success -> {
-            val bouts = (boutsState as UIState.Success<List<Bout>>).data
+            val bouts = (boutsState as UIState.Success<List<LocalBout>>).data
             val opponents = when (opponentsState) {
-                is UIState.Success -> (opponentsState as UIState.Success<List<Opponent>>).data
+                is UIState.Success -> (opponentsState as UIState.Success<List<LocalOpponent>>).data
                 else -> emptyList()
             }
 
@@ -142,7 +143,7 @@ private fun calculateStatistics(
 
             val byWeaponHand = mutableMapOf<String, StatsByCategory>()
             val byWeaponType = mutableMapOf<String, StatsByCategory>()
-            val byOpponent = mutableMapOf<String, OpponentStats>()
+            val byOpponent = mutableMapOf<Long, OpponentStats>()
 
             filteredBouts.forEach { bout ->
                 val opponent = opponents.find { it.id == bout.opponentId }
@@ -271,7 +272,7 @@ fun StatisticsScreen(
     // Фильтры по дате
     var selectedYear by remember { mutableIntStateOf(-1) } // -1 = все года
     var selectedMonth by remember { mutableIntStateOf(-1) } // -1 = все месяцы, 0 = не выбрано
-    var selectedOpponentId by remember { mutableStateOf<String?>(null) }
+    var selectedOpponentId by remember { mutableStateOf<Long?>(null) }
     var showFilters by remember { mutableStateOf(false) }
 
     // Данные
@@ -299,7 +300,7 @@ fun StatisticsScreen(
     val availableYears = remember(boutsState) {
         when (boutsState) {
             is UIState.Success -> {
-                val bouts = (boutsState as UIState.Success<List<Bout>>).data
+                val bouts = (boutsState as UIState.Success<List<LocalBout>>).data
                 bouts.map { bout ->
                     val calendar = Calendar.getInstance()
                     calendar.timeInMillis = bout.date
@@ -315,7 +316,7 @@ fun StatisticsScreen(
         if (selectedYear <= 0) emptyList() else {
             when (boutsState) {
                 is UIState.Success -> {
-                    val bouts = (boutsState as UIState.Success<List<Bout>>).data
+                    val bouts = (boutsState as UIState.Success<List<LocalBout>>).data
                     bouts.filter { bout ->
                         val calendar = Calendar.getInstance()
                         calendar.timeInMillis = bout.date
@@ -334,7 +335,7 @@ fun StatisticsScreen(
     // Доступные соперники для фильтрации
     val availableOpponents = remember(opponentsState) {
         when (opponentsState) {
-            is UIState.Success -> (opponentsState as UIState.Success<List<Opponent>>).data
+            is UIState.Success -> (opponentsState as UIState.Success<List<LocalOpponent>>).data
             else -> emptyList()
         }
     }
@@ -687,7 +688,7 @@ private fun OverallStatisticsCard(statistics: StatisticsData) {
                 )
 
                 val ratio = if (statistics.opponentScore > 0) {
-                    String.format("%.2f", statistics.userScore.toFloat() / statistics.opponentScore)
+                    String.format("%.2f", statistics.victories.toFloat() / statistics.totalBouts*100)
                 } else "∞"
 
                 StatItem(
@@ -885,8 +886,8 @@ private fun StatisticsTable(
 @Composable
 private fun OpponentStatistics(
     statistics: StatisticsData,
-    onOpponentClick: (String) -> Unit,
-    selectedOpponentId: String?
+    onOpponentClick: (Long) -> Unit,
+    selectedOpponentId:Long?
 ) {
     if (statistics.byOpponent.isNotEmpty()) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -32,7 +32,8 @@ import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
 import com.canhub.cropper.CropImageView
 import com.example.fencing_project.R
-import com.example.fencing_project.data.model.Opponent
+import com.example.fencing_project.data.local.LocalOpponent
+
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.viewmodel.OpponentViewModel
@@ -45,9 +46,10 @@ import kotlinx.coroutines.launch
 fun OpponentEditScreen(
     navController: NavController,
     pref: SharedPrefsManager,
-    opponentId: String? = null,
+    opponentId: Long? = null,
     opponentViewModel: OpponentViewModel = hiltViewModel()
 ) {
+    println("DEBUG: opponentId = ${opponentId}")
     val userId = pref.getUserId()
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -78,7 +80,7 @@ fun OpponentEditScreen(
 
     val currentOpponent = remember(opponentState) {
         when (opponentState) {
-            is UIState.Success -> (opponentState as UIState.Success<Opponent>).data
+            is UIState.Success -> (opponentState as UIState.Success<LocalOpponent>).data
             else -> null
         }
     }
@@ -123,7 +125,8 @@ fun OpponentEditScreen(
     // Заполняем форму данными соперника при загрузке
     LaunchedEffect(opponentState) {
         if (opponentState is UIState.Success && opponentId != null) {
-            val opponent = (opponentState as UIState.Success<Opponent>).data
+            val opponent = (opponentState as UIState.Success<LocalOpponent>).data
+
             opponentName = opponent.name
             opponentWeaponHand = opponent.weaponHand
             opponentWeaponType = opponent.weaponType
@@ -201,7 +204,7 @@ fun OpponentEditScreen(
                 TextButton(
                     onClick = {
                         if (opponentId != null && deleteOpponentState !is UIState.Loading) {
-                            opponentViewModel.deleteOpponentWithAvatar(opponentId, opponentAvatarUrl  = currentOpponent?.avatarUrl)
+                            opponentViewModel.deleteOpponentWithAvatar(opponentId, opponentAvatarUrl  = currentOpponent?.avatarPath)
                             showDeleteConfirmationDialog = false
                         }
                     },
@@ -336,7 +339,7 @@ fun OpponentEditScreen(
                     } else {
                         // Показываем загруженную аватарку из БД или аватар по умолчанию
                         AsyncImage(
-                            model = (opponentState as? UIState.Success<Opponent>)?.data?.avatarUrl,
+                            model = (opponentState as? UIState.Success<LocalOpponent>)?.data?.avatarPath,
                             contentDescription = "Аватар соперника",
                             modifier = Modifier
                                 .padding(
@@ -538,7 +541,7 @@ fun OpponentEditScreen(
                     onClick = {
                         if (!isLoading && opponentName.isNotBlank() &&
                             opponentWeaponHand.isNotBlank() && opponentWeaponType.isNotBlank()) {
-
+                            println("DEBUG  avatarurl = ${selectedImageUri}")
                             if (userId != null) {
                                 if (opponentId == null) {
                                     // Добавление

@@ -1,9 +1,11 @@
 package com.example.fencing_project.data.model
 
 import java.util.Date
+import java.util.UUID
 
 data class Opponent(
-    val id: String = "",
+    val roomId: Long=0,
+    val id: String = UUID.randomUUID().toString(),
     val name: String = "",
     val weaponHand: String = "", // "Правая", "Левая"
     val weaponType: String = "", // "Рапира", "Сабля", "Шпага"
@@ -21,6 +23,6 @@ data class Opponent(
     val totalOpponentScore: Int = 0, // Всего набранных очков соперником
     val lastBoutDate: Long? = null // Дата последнего боя
 ){
-    constructor() : this("", "", "", "", "","","", 0,
+    constructor() : this(0,"", "", "", "", "","","", 0,
         0,0,0,0,0,0,null)
 }

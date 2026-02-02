@@ -86,6 +86,10 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    fun loginOffline(){
+        _uiState.value = LoginUiState.Offline(true)
+    }
+
     fun resetState() {
         _uiState.value = LoginUiState.Idle
     }
@@ -97,4 +101,5 @@ sealed class LoginUiState {
     object Loading : LoginUiState()
     data class Success(val userId: String) : LoginUiState() // Добавляем userId
     data class Error(val message: String) : LoginUiState()
+    data class Offline(val offline: Boolean) : LoginUiState()
 }

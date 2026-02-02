@@ -3,8 +3,8 @@ package com.example.fencing_project.utils
 
 import android.content.Context
 import android.net.Uri
-import com.example.fencing_project.data.model.Bout
-import com.example.fencing_project.data.model.Opponent
+import com.example.fencing_project.data.local.LocalBout
+import com.example.fencing_project.data.local.LocalOpponent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,8 +24,8 @@ class ExcelImportService @Inject constructor(
 ) {
 
     data class ImportedData(
-        val opponents: List<Opponent> = emptyList(),
-        val bouts: List<Bout> = emptyList(),
+        val opponents: List<LocalOpponent> = emptyList(),
+        val bouts: List<LocalBout> = emptyList(),
         val error: String? = null
     )
 
@@ -60,8 +60,8 @@ class ExcelImportService @Inject constructor(
         }
     }
 
-    private fun parseOpponents(sheet: Sheet): List<Opponent> {
-        val opponents = mutableListOf<Opponent>()
+    private fun parseOpponents(sheet: Sheet): List<LocalOpponent> {
+        val opponents = mutableListOf<LocalOpponent>()
         val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
 
         for (rowIndex in 1..sheet.lastRowNum) {
@@ -82,13 +82,13 @@ class ExcelImportService @Inject constructor(
                 } else {
                     null
                 }
-                val opponent = Opponent(
-                    id = getCellValue(row.getCell(0)), // Оригинальный ID из файла
+                val opponent = LocalOpponent(
+                    id = getCellValue(row.getCell(0)).toLong(), // Оригинальный ID из файла
                     name = getCellValue(row.getCell(1)),
                     weaponHand = getCellValue(row.getCell(3)),
                     weaponType = getCellValue(row.getCell(4)),
                     comment = getCellValue(row.getCell(5)),
-                    avatarUrl = getCellValue(row.getCell(6)),
+                    avatarPath = getCellValue(row.getCell(6)),
                     createdBy = getCellValue(row.getCell(7)),
                     createdAt =  createdAt,
                     //totalBouts = getCellIntValue(row.getCell(8)),
@@ -110,8 +110,8 @@ class ExcelImportService @Inject constructor(
         return opponents
     }
 
-    private fun parseBouts(sheet: Sheet): List<Bout> {
-        val bouts = mutableListOf<Bout>()
+    private fun parseBouts(sheet: Sheet): List<LocalBout> {
+        val bouts = mutableListOf<LocalBout>()
         val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
 
         for (rowIndex in 1..sheet.lastRowNum) {
@@ -123,9 +123,9 @@ class ExcelImportService @Inject constructor(
             try {
                 val dateString = getCellValue(row.getCell(5))
                 val date = parseDate(dateString, dateFormat)
-                val bout = Bout(
-                    id = getCellValue(row.getCell(0)), // Оригинальный ID боя
-                    opponentId = getCellValue(row.getCell(1)), // Оригинальный ID соперника
+                val bout = LocalBout(
+                    id = getCellValue(row.getCell(0)).toLong(), // Оригинальный ID боя
+                    opponentId = getCellValue(row.getCell(1)).toLong(), // Оригинальный ID соперника
                     authorId = getCellValue(row.getCell(2)),
                     userScore = getCellIntValue(row.getCell(3)),
                     opponentScore = getCellIntValue(row.getCell(4)),

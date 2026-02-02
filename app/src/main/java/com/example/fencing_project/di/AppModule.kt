@@ -1,14 +1,30 @@
 package com.example.fencing_project.di
 
+
 import android.app.Application
 import android.content.Context
+import androidx.work.WorkerParameters
+import com.example.fencing_project.data.local.BoutDao
+import com.example.fencing_project.data.local.FencingDatabase
+import com.example.fencing_project.data.local.LocalBoutRepository
+import com.example.fencing_project.data.local.LocalStorageManager
+import com.example.fencing_project.data.local.OpponentDao
+
+
 import com.google.firebase.auth.FirebaseAuth
 import com.example.fencing_project.data.repository.AuthRepository
 import com.example.fencing_project.data.repository.BoutRepository
+import com.example.fencing_project.data.repository.SyncRepository
+import com.example.fencing_project.utils.AvatarStorageManager
+import com.example.fencing_project.utils.NetworkUtils
+
+
 import com.example.fencing_project.utils.SupabaseConfig
 import com.example.fencing_project.utils.SupabaseStorageManager
+import com.example.fencing_project.work.AlarmSyncScheduler
+import com.example.fencing_project.work.SyncServiceManager
 
-import com.google.firebase.BuildConfig
+
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.database.FirebaseDatabase
@@ -41,14 +57,16 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAuthRepository(firebaseAuth: FirebaseAuth): AuthRepository {
-        return AuthRepository(firebaseAuth)
+    fun provideAuthRepository(firebaseAuth: FirebaseAuth,
+                              @ApplicationContext context: Context): AuthRepository {
+        return AuthRepository(firebaseAuth, context)
     }
+
     @Provides
     @Singleton
     fun provideBoutRepository(
         database: FirebaseDatabase,
-        storageManager: SupabaseStorageManager
+        storageManager: SupabaseStorageManager,
     ): BoutRepository {
         return BoutRepository(database, storageManager)
     }
@@ -59,11 +77,7 @@ object AppModule {
         return Firebase.firestore
     }
 
-//    @Provides
-//    @Singleton
-//    fun provideBoutRepository(db: FirebaseFirestore): BoutRepository {
-//        return BoutRepository(db)
-//    }
+
     @Provides
     @Singleton
     fun provideFirebaseDatabase(): FirebaseDatabase {
@@ -99,4 +113,74 @@ object AppModule {
     ): SupabaseStorageManager {
         return SupabaseStorageManager(supabaseClient, context)
     }
+
+    @Provides
+    @Singleton
+    fun provideFencingDatabase(@ApplicationContext context: Context): FencingDatabase {
+        return FencingDatabase.getDatabase(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBoutDao(database: FencingDatabase) = database.boutDao()
+
+    @Provides
+    @Singleton
+    fun provideOpponentDao(database: FencingDatabase) = database.opponentDao()
+
+    @Provides
+    @Singleton
+    fun provideLocalBoutRepository(
+        boutDao: BoutDao,
+        opponentDao: OpponentDao,
+        avatarStorageManager: AvatarStorageManager
+    ): LocalBoutRepository {
+        return LocalBoutRepository(boutDao, opponentDao, avatarStorageManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAvatarStorageManager(
+        localStorageManager: LocalStorageManager
+    ): AvatarStorageManager {
+        // LocalStorageManager реализует AvatarStorageManager
+        return localStorageManager
+    }
+
+    @Provides
+    @Singleton
+    fun provideLocalStorageManager(@ApplicationContext context: Context): LocalStorageManager {
+        return LocalStorageManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun providerSyncServiceManager(@ApplicationContext context: Context): SyncServiceManager{
+        return SyncServiceManager(context = context)
+    }
+
+//    @Provides
+//    @Singleton
+//    fun providerSyncScheduler(@ApplicationContext context: Context): SyncScheduler{
+//        return SyncScheduler(context = context)
+//    }
+
+    @Provides
+    @Singleton
+    fun providerAlarmSyncScheduler(@ApplicationContext context: Context): AlarmSyncScheduler{
+        return AlarmSyncScheduler(context = context)
+    }
+
+    @Provides
+    @Singleton
+    fun providerNetworkUtils(@ApplicationContext context: Context): NetworkUtils{
+        return NetworkUtils(context = context)
+    }
+
+
+
+
+
+
+
 }

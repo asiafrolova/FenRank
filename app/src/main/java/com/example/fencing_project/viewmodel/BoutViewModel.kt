@@ -2,7 +2,8 @@ package com.example.fencing_project.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.fencing_project.data.model.Bout
+import com.example.fencing_project.data.local.LocalBout
+import com.example.fencing_project.data.local.LocalBoutRepository
 import com.example.fencing_project.data.repository.BoutRepository
 import com.example.fencing_project.utils.UIState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,31 +39,47 @@ import javax.inject.Inject
 // BoutViewModel.kt
 @HiltViewModel
 class BoutViewModel @Inject constructor(
-    private val repository: BoutRepository
+   // private val repository: BoutRepository
+    private val repository: LocalBoutRepository
 ) : ViewModel() {
 
     private val _saveBoutState = MutableStateFlow<UIState<String>>(UIState.Idle)
     val saveBoutState = _saveBoutState.asStateFlow()
 
-    private val _boutState = MutableStateFlow<UIState<Bout>>(UIState.Idle)
+    private val _boutState = MutableStateFlow<UIState<LocalBout>>(UIState.Idle)
     val boutState = _boutState.asStateFlow()
 
     private val _deleteBoutState = MutableStateFlow<UIState<Boolean>>(UIState.Idle)
     val deleteBoutState = _deleteBoutState.asStateFlow()
 
-    fun addBout(bout: Bout) {
-        viewModelScope.launch {
-            _saveBoutState.value = UIState.Loading
-            try {
-                repository.addBout(bout)
-                _saveBoutState.value = UIState.Success("Бой добавлен")
-            } catch (e: Exception) {
-                _saveBoutState.value = UIState.Error(e.message ?: "Ошибка добавления боя")
-            }
+//    fun addBout(bout: Bout) {
+//        viewModelScope.launch {
+//            _saveBoutState.value = UIState.Loading
+//            try {
+//                repository.addBout(bout)
+//                _saveBoutState.value = UIState.Success("Бой добавлен")
+//            } catch (e: Exception) {
+//                _saveBoutState.value = UIState.Error(e.message ?: "Ошибка добавления боя")
+//            }
+//        }
+//    }
+fun addBout(bout: LocalBout) {
+    viewModelScope.launch {
+        _saveBoutState.value = UIState.Loading
+        try {
+            // Генерируем ID если его нет
+
+
+            repository.addBout(bout)
+            _saveBoutState.value = UIState.Success("Бой сохранен локально")
+        } catch (e: Exception) {
+            _saveBoutState.value = UIState.Error(e.message ?: "Ошибка сохранения")
         }
     }
+}
 
-    fun updateBout(bout: Bout) {
+
+        fun updateBout(bout: LocalBout) {
         viewModelScope.launch {
             _saveBoutState.value = UIState.Loading
             try {
@@ -74,7 +91,7 @@ class BoutViewModel @Inject constructor(
         }
     }
 
-    fun deleteBout(boutId: String) {
+    fun deleteBout(boutId: Long) {
         viewModelScope.launch {
             _deleteBoutState.value = UIState.Loading
             try {
@@ -86,7 +103,7 @@ class BoutViewModel @Inject constructor(
         }
     }
 
-    fun getBout(boutId: String) {
+    fun getBout(boutId: Long) {
         viewModelScope.launch {
             _boutState.value = UIState.Loading
             try {

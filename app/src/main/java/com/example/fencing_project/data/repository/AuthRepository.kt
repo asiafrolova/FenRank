@@ -1,5 +1,9 @@
 package com.example.fencing_project.data.repository
 
+import android.content.Context
+import com.example.fencing_project.data.model.Opponent
+import com.example.fencing_project.data.model.Sync
+import com.example.fencing_project.utils.SharedPrefsManager
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -9,8 +13,10 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 class AuthRepository @Inject constructor(
-    private val firebaseAuth: FirebaseAuth
+    private val firebaseAuth: FirebaseAuth,
+    private val context: Context,
 ) {
+    val pref =SharedPrefsManager(context)
     val currentUser = MutableStateFlow<FirebaseUser?>(firebaseAuth.currentUser)
     init {
         // Слушаем изменения аутентификации
@@ -59,7 +65,12 @@ class AuthRepository @Inject constructor(
     }
 
     // Получаем текущего пользователя с обновленными данными
-    fun getCurrentUser() = currentUser.value
+    fun getCurrentUser(): FirebaseUser?{
+        return currentUser.value
+    }
+    fun getUserId():String?{
+        return pref.getUserId()
+    }
 
     suspend fun updatePassword(
         currentEmail: String,
@@ -139,15 +150,18 @@ suspend fun login(email: String, password: String): Result<FirebaseUser> {
             val user = firebaseAuth.currentUser
                 ?: return Result.failure(Exception("Пользователь не авторизован"))
 
+            println("DEBUG: удаляем firebase account")
             // Реаутентификация (требуется для удаления)
             val credential = EmailAuthProvider.getCredential(user.email ?: "", currentPassword)
             user.reauthenticate(credential).await()
 
             // Удаляем аккаунт
             user.delete().await()
-
+            println("DEBUG: удалили успешно")
             Result.success(Unit)
+
         } catch (e: Exception) {
+            println("DEBUG: удалили с ошибкой $e")
             Result.failure(e)
         }
     }
@@ -168,6 +182,7 @@ suspend fun login(email: String, password: String): Result<FirebaseUser> {
             emptyList()
         }
     }
+
 
 
 }

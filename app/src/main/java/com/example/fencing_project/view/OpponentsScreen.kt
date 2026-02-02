@@ -34,8 +34,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.fencing_project.R
-import com.example.fencing_project.data.model.Bout
-import com.example.fencing_project.data.model.Opponent
+import com.example.fencing_project.data.local.LocalBout
+import com.example.fencing_project.data.local.LocalOpponent
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.view.components.BottomNavigationBar
@@ -91,7 +91,7 @@ fun OpponentsScreen(
     val availableYears = remember(boutsState) {
         when (boutsState) {
             is UIState.Success -> {
-                val bouts = (boutsState as UIState.Success<List<Bout>>).data
+                val bouts = (boutsState as UIState.Success<List<LocalBout>>).data
                 bouts.map { bout ->
                     val calendar = Calendar.getInstance()
                     calendar.timeInMillis = bout.date
@@ -107,7 +107,7 @@ fun OpponentsScreen(
         if (filters.selectedYear == null) emptyList() else {
             when (boutsState) {
                 is UIState.Success -> {
-                    val bouts = (boutsState as UIState.Success<List<Bout>>).data
+                    val bouts = (boutsState as UIState.Success<List<LocalBout>>).data
                     bouts.filter { bout ->
                         val calendar = Calendar.getInstance()
                         calendar.timeInMillis = bout.date
@@ -127,7 +127,7 @@ fun OpponentsScreen(
     val filteredOpponents = remember(opponentsState, filters) {
         when (opponentsState) {
             is UIState.Success -> {
-                val opponents = (opponentsState as UIState.Success<List<Opponent>>).data
+                val opponents = (opponentsState as UIState.Success<List<LocalOpponent>>).data
                 opponents.filter { opponent ->
                     // Поиск по тексту
                     val matchesSearch = filters.searchQuery.isBlank() ||
@@ -154,9 +154,9 @@ fun OpponentsScreen(
     val filteredBouts = remember(boutsState, opponentsState, filters) {
         when (boutsState) {
             is UIState.Success -> {
-                val bouts = (boutsState as UIState.Success<List<Bout>>).data
+                val bouts = (boutsState as UIState.Success<List<LocalBout>>).data
                 val opponents = when (opponentsState) {
-                    is UIState.Success -> (opponentsState as UIState.Success<List<Opponent>>).data
+                    is UIState.Success -> (opponentsState as UIState.Success<List<LocalOpponent>>).data
                     else -> emptyList()
                 }
 
@@ -402,6 +402,7 @@ fun OpponentsScreen(
                         is UIState.Success -> {
                             if (filteredOpponents.isEmpty()) {
                                 EmptyState(
+                                    itsBout=false,
                                     text = if (filters.searchQuery.isBlank()) // Используйте filters.searchQuery
                                         "У вас пока нет соперников"
                                     else "Соперники не найдены",
@@ -438,6 +439,7 @@ fun OpponentsScreen(
                         is UIState.Success -> {
                             if (filteredBouts.isEmpty()) {
                                 EmptyState(
+                                    itsBout=true,
                                     text = if (filters.searchQuery.isBlank()) // Используйте filters.searchQuery
                                         "У вас пока нет боев"
                                     else "Бои не найдены",
@@ -446,7 +448,7 @@ fun OpponentsScreen(
                             } else {
                                 BoutsList(
                                     bouts = filteredBouts,
-                                    opponents = (opponentsState as? UIState.Success<List<Opponent>>)?.data ?: emptyList(),
+                                    opponents = (opponentsState as? UIState.Success<List<LocalOpponent>>)?.data ?: emptyList(),
                                     onBoutClick = { bout ->
                                         navController.navigate("edit_bout/${bout.id}")
                                     },
@@ -668,8 +670,8 @@ private fun TabBar(
 // Компонент списка соперников
 @Composable
 public fun OpponentsList(
-    opponents: List<Opponent>,
-    onOpponentClick: (Opponent) -> Unit,
+    opponents: List<LocalOpponent>,
+    onOpponentClick: (LocalOpponent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -688,7 +690,7 @@ public fun OpponentsList(
 
 @Composable
 public fun OpponentItem(
-    opponent: Opponent,
+    opponent: LocalOpponent,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -710,7 +712,7 @@ public fun OpponentItem(
         ) {
             // Аватарка
             AsyncImage(
-                model = opponent.avatarUrl,
+                model = opponent.avatarPath,
                 contentDescription = "Аватар ${opponent.name}",
                 modifier = Modifier
                     .size(60.dp)
@@ -791,9 +793,9 @@ public fun OpponentItem(
 // Компонент списка боев
 @Composable
 public fun BoutsList(
-    bouts: List<Bout>,
-    opponents: List<Opponent>,
-    onBoutClick: (Bout) -> Unit,
+    bouts: List<LocalBout>,
+    opponents: List<LocalOpponent>,
+    onBoutClick: (LocalBout) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Группируем бои по датам
@@ -835,8 +837,8 @@ public fun BoutsList(
 
 @Composable
 public fun BoutItem(
-    bout: Bout,
-    opponent: Opponent?,
+    bout: LocalBout,
+    opponent: LocalOpponent?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -861,7 +863,7 @@ public fun BoutItem(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 AsyncImage(
-                    model = opponent?.avatarUrl,
+                    model = opponent?.avatarPath,
                     contentDescription = "Аватар ${opponent?.name ?: "Неизвестный"}",
                     modifier = Modifier
                         .size(40.dp)
@@ -980,6 +982,7 @@ private fun LoadingIndicator() {
 
 @Composable
 private fun EmptyState(
+    itsBout: Boolean,
     text: String,
     modifier: Modifier = Modifier
 ) {
@@ -989,7 +992,7 @@ private fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
-            painter = painterResource(R.drawable.bout),
+            painter = if (itsBout) {painterResource(R.drawable.bout)} else {painterResource(R.drawable.fencing_mask)},
             contentDescription = "Пусто",
             tint = Color(100, 100, 100),
             modifier = Modifier.size(100.dp)
@@ -1048,7 +1051,7 @@ private fun ErrorState(
 }
 
 // Расширение для Bout чтобы получить текст результата
-public fun Bout.getResultText(): String {
+public fun LocalBout.getResultText(): String {
     return when {
         userScore > opponentScore -> "Победа"
         userScore < opponentScore -> "Поражение"

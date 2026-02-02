@@ -4,6 +4,9 @@ package com.example.fencing_project.viewmodel
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.fencing_project.data.local.LocalBoutRepository
+import com.example.fencing_project.data.local.toLocalBout
+import com.example.fencing_project.data.local.toLocalOpponent
 import com.example.fencing_project.data.repository.BoutRepository
 import com.example.fencing_project.utils.ExcelImportService
 import com.example.fencing_project.utils.UIState
@@ -16,7 +19,8 @@ import javax.inject.Inject
 // ImportViewModel.kt - СОХРАНЕНИЕ в Firebase
 @HiltViewModel
 class ImportViewModel @Inject constructor(
-    private val boutRepository: BoutRepository,
+    //private val boutRepository: BoutRepository,
+    private val boutRepository: LocalBoutRepository,
     private val excelImportService: ExcelImportService
 ) : ViewModel() {
 
@@ -50,7 +54,7 @@ class ImportViewModel @Inject constructor(
 
                 // 2. СОХРАНЯЕМ СОПЕРНИКОВ в Firebase
                 println("2. Сохраняем соперников в Firebase...")
-                val idMapping = mutableMapOf<String, String>() // Map<Старый_ID, Новый_ID>
+                val idMapping = mutableMapOf<Long, Long>() // Map<Старый_ID, Новый_ID>
 
                 for (importedOpponent in importedData.opponents) {
                     try {
@@ -58,7 +62,7 @@ class ImportViewModel @Inject constructor(
 
                         // Создаем нового соперника для Firebase
                         val opponentForFirebase = importedOpponent.copy(
-                            id = "", // Пустой ID - Firebase сгенерирует новый
+                            id = 0, // Пустой ID - Firebase сгенерирует новый
                             createdBy = userId // Устанавливаем текущего пользователя
                         )
 
@@ -91,7 +95,7 @@ class ImportViewModel @Inject constructor(
                         if (newOpponentId != null) {
                             // Создаем новый бой с обновленным ID соперника
                             val boutForFirebase = importedBout.copy(
-                                id = "", // Пустой ID - Firebase сгенерирует новый
+                                id = 0, // Пустой ID - Firebase сгенерирует новый
                                 opponentId = newOpponentId, // Используем НОВЫЙ ID
                                 authorId = userId // Устанавливаем текущего пользователя
                             )
