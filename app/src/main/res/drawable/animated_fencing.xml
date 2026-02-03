@@ -1,0 +1,8 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/fencing_sq">
+
+    <target
+        android:name="logo"
+        android:animation="@animator/logo_scale" />
+
+</animated-vector>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/fencing_sq">
+
+    <target
+        android:name="logoGroup"
+        android:animation="@animator/fill_anim"/>
+    <target
+        android:name="logoGroup"
+        android:animation="@animator/fill_anim2"/>
+
+</animated-vector>
+

@@ -30,6 +30,7 @@ import com.example.fencing_project.utils.SharedPrefsManager
 
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.view.components.BottomNavigationBar
+import com.example.fencing_project.view.components.RestoreDataDialog
 import com.example.fencing_project.viewmodel.HomeViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -37,9 +38,12 @@ import java.util.*
 @Composable
 fun HomeScreen(
     navController: NavController,
+
     viewModel: HomeViewModel = hiltViewModel(),
-    pref: SharedPrefsManager
+    pref: SharedPrefsManager,
+
 ) {
+    var showRestoreDialog by remember { mutableStateOf(!pref.isOffline()) }
 
 
     val userId: String? = pref.getUserId()
@@ -79,6 +83,12 @@ fun HomeScreen(
             }
             else -> emptyList()
         }
+    }
+
+    if (showRestoreDialog) {
+        RestoreDataDialog(
+            onDismiss = { showRestoreDialog = false }
+        )
     }
 
     Scaffold(

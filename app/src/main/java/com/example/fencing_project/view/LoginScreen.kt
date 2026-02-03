@@ -59,6 +59,7 @@ import com.example.fencing_project.MainActivity
 import com.example.fencing_project.R
 import com.example.fencing_project.Routes
 import com.example.fencing_project.utils.SharedPrefsManager
+import com.example.fencing_project.view.components.RestoreDataDialog
 import com.example.fencing_project.viewmodel.LoginUiState
 import com.example.fencing_project.viewmodel.LoginViewModel
 import com.example.fencing_project.viewmodel.ProfileViewModel
@@ -82,6 +83,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
     val uiState by viewModel.uiState.collectAsState()
 
 
+
     LaunchedEffect(uiState) {
         when (uiState) {
             is LoginUiState.Success -> {
@@ -94,6 +96,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
                 navController.navigate(Routes.Home.route) {
                     popUpTo(Routes.Login.route) { inclusive = true }
                 }
+
                 viewModel.resetState()
             }
             is LoginUiState.Offline -> {

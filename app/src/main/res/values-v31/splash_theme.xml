@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Fencing_project.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenAnimatedIcon">@drawable/avd_anim2</item>
+        <item name="windowSplashScreenBackground">@color/background_gray</item>
+
+        <item name="windowSplashScreenIconBackgroundColor">@color/background_gray</item>
+
+        <item name="postSplashScreenTheme">@style/Theme.Fencing_project</item>
+        <item name="windowSplashScreenAnimationDuration">1500</item>
+
+
+    </style>
+
+</resources>
