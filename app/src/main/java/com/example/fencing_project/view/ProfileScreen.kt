@@ -5,13 +5,11 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,41 +19,29 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.modifier.modifierLocalConsumer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,17 +54,14 @@ import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
 import com.canhub.cropper.CropImageView
 import com.example.fencing_project.R
-import com.example.fencing_project.data.local.LocalOpponent
+import com.example.fencing_project.getString
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.view.components.BottomNavigationBar
+import com.example.fencing_project.view.components.SyncDataDialog
 import com.example.fencing_project.viewmodel.ProfileViewModel
 import com.example.fencing_project.viewmodel.SyncViewModel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import org.apache.logging.log4j.spi.ThreadContextMapFactory.init
+
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -86,22 +69,11 @@ import org.apache.logging.log4j.spi.ThreadContextMapFactory.init
 fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                   pref: SharedPrefsManager, viewModel: ProfileViewModel = hiltViewModel(),
                   syncViewModel: SyncViewModel = hiltViewModel()) {
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-
     val updateState by viewModel.updateState.collectAsState()
-
     val userAvatarUrl by viewModel.userAvatarUrl.collectAsState()
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-
-    val coroutineScope = rememberCoroutineScope()
-
-    var showImagePicker by remember { mutableStateOf(false) }
-
     var forceRefresh by remember { mutableStateOf(0) }
     var showExitConfirmationDialog by remember { mutableStateOf(false) }
-
-    // Image Picker with Crop (как раньше)
     val cropLauncher = rememberLauncherForActivityResult(CropImageContract()) { result ->
         if (result.isSuccessful) {
             result.uriContent?.let { uri ->
@@ -111,6 +83,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
             }
         }
     }
+    val context = LocalContext.current
 
 
 
@@ -133,16 +106,13 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
         }
     }
 
-    // Обработка состояния
     LaunchedEffect(updateState) {
         when (updateState) {
             is UIState.Success -> {
                 forceRefresh++
-                // Snackbar или toast
                 viewModel.resetState()
             }
             is UIState.Error -> {
-                // Ошибка
                 viewModel.resetState()
             }
             else -> {}
@@ -150,59 +120,16 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
     }
 
     if (showExitConfirmationDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showExitConfirmationDialog = false
+        SyncDataDialog(onDismiss = {showExitConfirmationDialog = false
+            viewModel.logout()
+            pref.logout()
+            navController.navigate("login")},
+            text= getString(context,R.string.you_want_sync_before_exit,pref.getLanguage()),
+            dismissText = getString(context,R.string.exit,pref.getLanguage()),
+            context=context,
+            pref=pref
+            )
 
-            },
-            title = {
-                Text(
-                    "Сохранение",
-                    color = Color.White
-                )
-            },
-            text = {
-                Text(
-                    "Может вы хотите сделать резервную копию данных перед выходом?",
-                    color = Color.White
-                )
-            },
-            containerColor = Color(61, 61, 70),
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        syncViewModel.startBackgroundSync()
-                        showExitConfirmationDialog = false
-                        viewModel.logout()
-                        pref.logout()
-                        navController.navigate("login")
-
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        containerColor = Color(139, 0, 0),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text("Сделать резервную копию")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showExitConfirmationDialog = false
-                        viewModel.logout()
-                        pref.logout()
-                        navController.navigate("login")
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        containerColor = Color(44, 44, 51),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text("Выйти")
-                }
-            }
-        )
     }
 
         Scaffold(
@@ -224,17 +151,22 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                         .padding(innerPadding),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(modifier = Modifier.padding(10.dp).size(230.dp)) {
+                    Box(modifier = Modifier
+                        .padding(10.dp)
+                        .size(230.dp)) {
                         if (selectedImageUri != null) {
                             AsyncImage(
                                 model = selectedImageUri,
                                 contentDescription = "Аватар",
-                                modifier = Modifier.padding(
-                                    top = 0.dp,
-                                    end = 0.dp,
-                                    start = 15.dp,
-                                    bottom = 0.dp
-                                ).size(200.dp).clip(CircleShape)
+                                modifier = Modifier
+                                    .padding(
+                                        top = 0.dp,
+                                        end = 0.dp,
+                                        start = 15.dp,
+                                        bottom = 0.dp
+                                    )
+                                    .size(200.dp)
+                                    .clip(CircleShape)
                                     .border(3.dp, Color.White, shape = CircleShape),
                                 contentScale = ContentScale.Crop,
                                 error = painterResource(R.drawable.avatar),
@@ -246,12 +178,15 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                             AsyncImage(
                                 model = userAvatarUrl,
                                 contentDescription = "Аватар",
-                                modifier = Modifier.padding(
-                                    top = 0.dp,
-                                    end = 0.dp,
-                                    start = 15.dp,
-                                    bottom = 0.dp
-                                ).size(200.dp).clip(CircleShape)
+                                modifier = Modifier
+                                    .padding(
+                                        top = 0.dp,
+                                        end = 0.dp,
+                                        start = 15.dp,
+                                        bottom = 0.dp
+                                    )
+                                    .size(200.dp)
+                                    .clip(CircleShape)
                                     .border(3.dp, Color.White, shape = CircleShape),
                                 contentScale = ContentScale.Crop,
                                 error = painterResource(R.drawable.avatar),
@@ -268,7 +203,9 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                 )
                             },
-                            modifier = Modifier.padding(top = 160.dp, start = 160.dp).size(45.dp),
+                            modifier = Modifier
+                                .padding(top = 160.dp, start = 160.dp)
+                                .size(45.dp),
                             shape = CircleShape,
                             colors = IconButtonColors(
                                 containerColor = Color.White,
@@ -288,8 +225,10 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                 }
 
                 Box(
-                    modifier = Modifier.padding(end = 20.dp, start = 20.dp, bottom = 20.dp)
-                        .fillMaxWidth().fillMaxHeight(0.55f)
+                    modifier = Modifier
+                        .padding(end = 20.dp, start = 20.dp, bottom = 20.dp)
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.55f)
                         .align(Alignment.BottomCenter)
                         .dropShadow(
                             shape = RoundedCornerShape(20.dp),
@@ -352,16 +291,16 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                     ) {
                         OptionItem(
                             icon = painterResource(R.drawable.change_profile),
-                            title = "Редактировать профиль",
+                            title = getString(context,R.string.change_profile,pref.getLanguage()),
                             onClick = { navController.navigate("profile_edit") }
                         )
 
                         OptionItem(
-                            icon = painterResource(R.drawable.statistics), title = "Статистика",
+                            icon = painterResource(R.drawable.statistics), title = getString(context,R.string.statistics,pref.getLanguage()),
                             onClick = { navController.navigate("statistics") }
                         )
                         OptionItem(
-                            icon = painterResource(R.drawable.settings), title = "Настройки",
+                            icon = painterResource(R.drawable.settings), title = getString(context,R.string.settings,pref.getLanguage()),
                             onClick = { navController.navigate("settings") }
                         )
                     }
@@ -373,7 +312,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, navController: NavController,
                         verticalArrangement = Arrangement.Bottom
                     ) {
                         OptionItem(
-                            icon = painterResource(R.drawable.logout), title = "Выйти из аккаунта",
+                            icon = painterResource(R.drawable.logout), title = getString(context,R.string.exit_from_profile,pref.getLanguage()),
                             onClick = {
                                 if(!pref.isOffline()) {
                                     showExitConfirmationDialog = true

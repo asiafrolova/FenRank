@@ -1,10 +1,7 @@
 package com.example.fencing_project.data.local
 
-
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import org.apache.commons.math3.util.MathArrays.unique
 
 @Entity(tableName = "opponents")
 data class LocalOpponent(

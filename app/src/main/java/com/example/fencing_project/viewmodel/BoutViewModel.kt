@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.fencing_project.data.local.LocalBout
 import com.example.fencing_project.data.local.LocalBoutRepository
-import com.example.fencing_project.data.repository.BoutRepository
 import com.example.fencing_project.utils.UIState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,34 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-//@HiltViewModel
-//class BoutViewModel @Inject constructor(
-//    private val repository: BoutRepository
-//) : ViewModel() {
-//
-//    val addBoutState = MutableStateFlow<UIState<String>>(UIState.Idle)
-//
-//    fun addBout(bout: Bout) {
-//        addBoutState.value = UIState.Loading
-//        viewModelScope.launch {
-//            try {
-//                val boutId = repository.addBout(bout)
-//                addBoutState.value = UIState.Success("Бой добавлен! ID: $boutId")
-//            } catch (e: Exception) {
-//                addBoutState.value = UIState.Error(e.message ?: "Ошибка добавления боя")
-//            }
-//        }
-//    }
-//
-//    fun resetState() {
-//        addBoutState.value = UIState.Idle
-//    }
-//}
-
-// BoutViewModel.kt
 @HiltViewModel
 class BoutViewModel @Inject constructor(
-   // private val repository: BoutRepository
     private val repository: LocalBoutRepository
 ) : ViewModel() {
 
@@ -52,24 +25,10 @@ class BoutViewModel @Inject constructor(
     private val _deleteBoutState = MutableStateFlow<UIState<Boolean>>(UIState.Idle)
     val deleteBoutState = _deleteBoutState.asStateFlow()
 
-//    fun addBout(bout: Bout) {
-//        viewModelScope.launch {
-//            _saveBoutState.value = UIState.Loading
-//            try {
-//                repository.addBout(bout)
-//                _saveBoutState.value = UIState.Success("Бой добавлен")
-//            } catch (e: Exception) {
-//                _saveBoutState.value = UIState.Error(e.message ?: "Ошибка добавления боя")
-//            }
-//        }
-//    }
 fun addBout(bout: LocalBout) {
     viewModelScope.launch {
         _saveBoutState.value = UIState.Loading
         try {
-            // Генерируем ID если его нет
-
-
             repository.addBout(bout)
             _saveBoutState.value = UIState.Success("Бой сохранен локально")
         } catch (e: Exception) {
@@ -77,7 +36,6 @@ fun addBout(bout: LocalBout) {
         }
     }
 }
-
 
         fun updateBout(bout: LocalBout) {
         viewModelScope.launch {

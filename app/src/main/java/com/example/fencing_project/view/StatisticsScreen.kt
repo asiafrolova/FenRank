@@ -1,5 +1,6 @@
 package com.example.fencing_project.view
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,6 +58,7 @@ import androidx.navigation.NavController
 import com.example.fencing_project.R
 import com.example.fencing_project.data.local.LocalBout
 import com.example.fencing_project.data.local.LocalOpponent
+import com.example.fencing_project.getString
 
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
@@ -95,7 +97,7 @@ private data class OpponentStats(
     val opponentScore: Int = 0
 )
 
-// Функция для расчета статистики (вынесена из Composable)
+
 private fun calculateStatistics(
     boutsState: UIState<List<LocalBout>>,
     opponentsState: UIState<List<LocalOpponent>>,
@@ -111,14 +113,11 @@ private fun calculateStatistics(
                 else -> emptyList()
             }
 
-            // Фильтруем бои
             val filteredBouts = bouts.filter { bout ->
-                // Фильтр по сопернику
                 val matchesOpponent = selectedOpponentId?.let { id ->
                     bout.opponentId == id
                 } ?: true
 
-                // Фильтр по дате
                 val calendar = Calendar.getInstance()
                 calendar.timeInMillis = bout.date
 
@@ -133,7 +132,6 @@ private fun calculateStatistics(
                 matchesOpponent && matchesYear && matchesMonth
             }
 
-            // Рассчитываем статистику
             var totalBouts = 0
             var victories = 0
             var defeats = 0
@@ -148,7 +146,6 @@ private fun calculateStatistics(
             filteredBouts.forEach { bout ->
                 val opponent = opponents.find { it.id == bout.opponentId }
 
-                // Общая статистика
                 totalBouts++
                 userScore += bout.userScore
                 opponentScore += bout.opponentScore
@@ -159,7 +156,6 @@ private fun calculateStatistics(
                     else -> draws++
                 }
 
-                // Статистика по руке
                 opponent?.weaponHand?.let { hand ->
                     val stats = byWeaponHand.getOrPut(hand) { StatsByCategory() }
                     byWeaponHand[hand] = stats.copy(
@@ -172,7 +168,7 @@ private fun calculateStatistics(
                     )
                 }
 
-                // Статистика по оружию
+
                 opponent?.weaponType?.let { type ->
                     val stats = byWeaponType.getOrPut(type) { StatsByCategory() }
                     byWeaponType[type] = stats.copy(
@@ -185,7 +181,7 @@ private fun calculateStatistics(
                     )
                 }
 
-                // Статистика по сопернику
+
                 opponent?.let { opp ->
                     val stats = byOpponent.getOrPut(opp.id) {
                         OpponentStats(opponentId = opp.id, opponentName = opp.name)
@@ -266,16 +262,14 @@ fun StatisticsScreen(
     pref: SharedPrefsManager,
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val userId = pref.getUserId()
 
-    // Фильтры по дате
-    var selectedYear by remember { mutableIntStateOf(-1) } // -1 = все года
-    var selectedMonth by remember { mutableIntStateOf(-1) } // -1 = все месяцы, 0 = не выбрано
+    var selectedYear by remember { mutableIntStateOf(-1) }
+    var selectedMonth by remember { mutableIntStateOf(-1) }
     var selectedOpponentId by remember { mutableStateOf<Long?>(null) }
     var showFilters by remember { mutableStateOf(false) }
-
-    // Данные
     val boutsState by homeViewModel.bouts.collectAsState()
     val opponentsState by homeViewModel.opponents.collectAsState()
 
@@ -285,7 +279,7 @@ fun StatisticsScreen(
         }
     }
 
-    // Вычисляем статистику
+
     val statistics = remember(boutsState, opponentsState, selectedYear, selectedMonth, selectedOpponentId) {
         calculateStatistics(
             boutsState = boutsState,
@@ -296,7 +290,6 @@ fun StatisticsScreen(
         )
     }
 
-    // Доступные года для фильтрации
     val availableYears = remember(boutsState) {
         when (boutsState) {
             is UIState.Success -> {
@@ -311,7 +304,7 @@ fun StatisticsScreen(
         }
     }
 
-    // Доступные месяцы для выбранного года
+
     val availableMonths = remember(selectedYear, boutsState) {
         if (selectedYear <= 0) emptyList() else {
             when (boutsState) {
@@ -332,7 +325,6 @@ fun StatisticsScreen(
         }
     }
 
-    // Доступные соперники для фильтрации
     val availableOpponents = remember(opponentsState) {
         when (opponentsState) {
             is UIState.Success -> (opponentsState as UIState.Success<List<LocalOpponent>>).data
@@ -348,17 +340,16 @@ fun StatisticsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Статистика", color = Color.White)
-                        // Кнопка фильтров
+                        Text(getString(context,R.string.statistics,pref.getLanguage()), color = Color.White)
                         Icon(
                             painter = painterResource(R.drawable.filter),
-                            contentDescription = "Фильтры",
+                            contentDescription = getString(context,R.string.filters,pref.getLanguage()),
                             tint = if (selectedYear > 0 || selectedMonth > 0 || selectedOpponentId != null)
                                 Color(139, 0, 0)
                             else
                                 Color.White,
                             modifier = Modifier
-                                .clickable {  showFilters = true }
+                                .clickable { showFilters = true }
                                 .padding(end = 8.dp)
                                 .size(20.dp)
                         )
@@ -399,9 +390,6 @@ fun StatisticsScreen(
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
 
-
-
-                // Показатели активности фильтра
                 FilterIndicator(
                     selectedYear = selectedYear,
                     selectedMonth = selectedMonth,
@@ -412,38 +400,37 @@ fun StatisticsScreen(
                         selectedYear = -1
                         selectedMonth = -1
                         selectedOpponentId = null
-                    }
+                    },
+                    context,
+                    pref
                 )
 
-                // Общая статистика
-                OverallStatisticsCard(statistics)
-
-                // Статистика по рукам (таблица)
+                OverallStatisticsCard(statistics, context, pref)
                 if (statistics.byWeaponHand.isNotEmpty()) {
-                    WeaponHandStatistics(statistics)
+                    WeaponHandStatistics(statistics, context, pref)
+
                 }
 
-                // Статистика по оружию (таблица)
                 if (statistics.byWeaponType.isNotEmpty()) {
-                    WeaponTypeStatistics(statistics)
+                    WeaponTypeStatistics(statistics, context, pref)
                 }
 
-                // Статистика по соперникам (список)
                 if (statistics.byOpponent.isNotEmpty()) {
                     OpponentStatistics(
                         statistics = statistics,
                         onOpponentClick = { opponentId ->
                             selectedOpponentId = if (selectedOpponentId == opponentId) null else opponentId
                         },
-                        selectedOpponentId = selectedOpponentId
+                        selectedOpponentId = selectedOpponentId,
+                        context,
+                        pref
                     )
                 }
 
-                // Легенда сокращений
-                LegendSection()
+                LegendSection(context,pref)
             }
 
-            // BottomSheet для фильтров
+
             if (showFilters) {
                 ModalBottomSheet(
                     onDismissRequest = { showFilters = false },
@@ -456,68 +443,64 @@ fun StatisticsScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
-                            text = "Фильтры статистики",
+                            text = getString(context,R.string.filters_statistics,pref.getLanguage()),
                             color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
 
-                        // Фильтр по году
                         StatisticsFilterSection(
-                            title = "Год",
-                            items = listOf("Все время") + availableYears.map { it.toString() },
-                            selectedItem = if (selectedYear <= 0) "Все время" else selectedYear.toString(),
+                            title = getString(context,R.string.year,pref.getLanguage()),
+                            items = listOf(getString(context,R.string.all_time,pref.getLanguage())) + availableYears.map { it.toString() },
+                            selectedItem = if (selectedYear <= 0) getString(context,R.string.all_time,pref.getLanguage()) else selectedYear.toString(),
                             onItemSelected = { item ->
-                                selectedYear = if (item == "Все время") -1 else item.toInt()
-                                selectedMonth = -1 // Сбрасываем месяц при смене года
+                                selectedYear = if (item == getString(context,R.string.all_time,pref.getLanguage())) -1 else item.toInt()
+                                selectedMonth = -1
                             }
                         )
 
-                        // Фильтр по месяцу (только если выбран год)
                         if (selectedYear > 0 && availableMonths.isNotEmpty()) {
                             StatisticsFilterSection(
-                                title = "Месяц",
-                                items = listOf("Все месяцы") + availableMonths.map { month ->
+                                title =getString(context,R.string.month,pref.getLanguage()),
+                                items = listOf(getString(context,R.string.all_months,pref.getLanguage())) + availableMonths.map { month ->
                                     when (month) {
-                                        1 -> "Январь"; 2 -> "Февраль"; 3 -> "Март"; 4 -> "Апрель"
-                                        5 -> "Май"; 6 -> "Июнь"; 7 -> "Июль"; 8 -> "Август"
-                                        9 -> "Сентябрь"; 10 -> "Октябрь"; 11 -> "Ноябрь"; 12 -> "Декабрь"
-                                        else -> "Месяц $month"
+                                        1 -> getString(context,R.string.january,pref.getLanguage()); 2 -> getString(context,R.string.february,pref.getLanguage()); 3 -> getString(context,R.string.march,pref.getLanguage()); 4 -> getString(context,R.string.april,pref.getLanguage())
+                                        5 -> getString(context,R.string.may,pref.getLanguage()); 6 -> getString(context,R.string.june,pref.getLanguage()); 7 -> getString(context,R.string.july,pref.getLanguage()); 8 ->getString(context,R.string.august,pref.getLanguage())
+                                        9 -> getString(context,R.string.september,pref.getLanguage()); 10 -> getString(context,R.string.october,pref.getLanguage()); 11 -> getString(context,R.string.november,pref.getLanguage()); 12 ->  getString(context,R.string.december,pref.getLanguage())
+                                        else -> getString(context,R.string.month,pref.getLanguage())
                                     }
                                 },
-                                selectedItem = if (selectedMonth <= 0) "Все месяцы" else when (selectedMonth) {
-                                    1 -> "Январь"; 2 -> "Февраль"; 3 -> "Март"; 4 -> "Апрель"
-                                    5 -> "Май"; 6 -> "Июнь"; 7 -> "Июль"; 8 -> "Август"
-                                    9 -> "Сентябрь"; 10 -> "Октябрь"; 11 -> "Ноябрь"; 12 -> "Декабрь"
-                                    else -> "Месяц $selectedMonth"
+                                selectedItem = if (selectedMonth <= 0) getString(context,R.string.all_months,pref.getLanguage()) else when (selectedMonth) {
+                                    1 -> getString(context,R.string.january,pref.getLanguage()); 2 -> getString(context,R.string.february,pref.getLanguage()); 3 -> getString(context,R.string.march,pref.getLanguage()); 4 -> getString(context,R.string.april,pref.getLanguage())
+                                    5 -> getString(context,R.string.may,pref.getLanguage()); 6 ->getString(context,R.string.june,pref.getLanguage()); 7 -> getString(context,R.string.july,pref.getLanguage()); 8 -> getString(context,R.string.august,pref.getLanguage())
+                                    9 -> getString(context,R.string.september,pref.getLanguage()); 10 -> getString(context,R.string.october,pref.getLanguage()); 11 -> getString(context,R.string.november,pref.getLanguage()); 12 ->  getString(context,R.string.december,pref.getLanguage())
+                                    else ->  getString(context,R.string.month,pref.getLanguage())
                                 },
                                 onItemSelected = { item ->
                                     selectedMonth = when (item) {
-                                        "Все месяцы" -> -1
-                                        "Январь" -> 1; "Февраль" -> 2; "Март" -> 3; "Апрель" -> 4
-                                        "Май" -> 5; "Июнь" -> 6; "Июль" -> 7; "Август" -> 8
-                                        "Сентябрь" -> 9; "Октябрь" -> 10; "Ноябрь" -> 11; "Декабрь" -> 12
+                                        getString(context,R.string.all_months,pref.getLanguage()) -> -1
+                                        getString(context,R.string.january,pref.getLanguage()) -> 1; getString(context,R.string.february,pref.getLanguage()) -> 2; getString(context,R.string.march,pref.getLanguage()) -> 3; getString(context,R.string.april,pref.getLanguage()) -> 4
+                                        getString(context,R.string.may,pref.getLanguage()) -> 5; getString(context,R.string.june,pref.getLanguage()) -> 6; getString(context,R.string.july,pref.getLanguage()) -> 7; getString(context,R.string.august,pref.getLanguage()) -> 8
+                                        getString(context,R.string.september,pref.getLanguage()) -> 9; getString(context,R.string.october,pref.getLanguage()) -> 10;  getString(context,R.string.november,pref.getLanguage()) -> 11;  getString(context,R.string.december,pref.getLanguage()) -> 12
                                         else -> -1
                                     }
                                 }
                             )
                         }
 
-                        // Фильтр по сопернику
                         StatisticsFilterSection(
-                            title = "Соперник",
-                            items = listOf("Все соперники") + availableOpponents.map { it.name },
+                            title = getString(context,R.string.opponent,pref.getLanguage()),
+                            items = listOf(getString(context,R.string.all_opponents,pref.getLanguage())) + availableOpponents.map { it.name },
                             selectedItem = selectedOpponentId?.let { id ->
                                 availableOpponents.find { it.id == id }?.name
-                            } ?: "Все соперники",
+                            } ?: getString(context,R.string.opponent,pref.getLanguage()),
                             onItemSelected = { item ->
-                                selectedOpponentId = if (item == "Все соперники") null else {
+                                selectedOpponentId = if (item == getString(context,R.string.opponent,pref.getLanguage())) null else {
                                     availableOpponents.find { it.name == item }?.id
                                 }
                             }
                         )
 
-                        // Кнопки
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -534,7 +517,7 @@ fun StatisticsScreen(
                                     contentColor = Color.White
                                 )
                             ) {
-                                Text("Сбросить все")
+                                Text(getString(context,R.string.reset_all,pref.getLanguage()))
                             }
 
                             Button(
@@ -545,7 +528,7 @@ fun StatisticsScreen(
                                     contentColor = Color.White
                                 )
                             ) {
-                                Text("Применить")
+                                Text(getString(context,R.string.apply,pref.getLanguage()))
                             }
                         }
                     }
@@ -560,7 +543,9 @@ private fun FilterIndicator(
     selectedYear: Int,
     selectedMonth: Int,
     selectedOpponent: String?,
-    onClear: () -> Unit
+    onClear: () -> Unit,
+    context:Context,
+    pref: SharedPrefsManager,
 ) {
     val hasFilters = selectedYear > 0 || selectedMonth > 0 || selectedOpponent != null
 
@@ -578,7 +563,7 @@ private fun FilterIndicator(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "Активные фильтры:",
+                        text = getString(context,R.string.active_filters,pref.getLanguage()),
                         color = Color.White,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
@@ -586,22 +571,22 @@ private fun FilterIndicator(
 
                     val filtersText = buildString {
                         if (selectedYear > 0) {
-                            append("Год: $selectedYear")
+                            append(getString(context,R.string.year,pref.getLanguage())+":"+"$selectedYear")
                             if (selectedMonth > 0) {
                                 val monthName = when (selectedMonth) {
-                                    1 -> "Январь"; 2 -> "Февраль"; 3 -> "Март"; 4 -> "Апрель"
-                                    5 -> "Май"; 6 -> "Июнь"; 7 -> "Июль"; 8 -> "Август"
-                                    9 -> "Сентябрь"; 10 -> "Октябрь"; 11 -> "Ноябрь"; 12 -> "Декабрь"
-                                    else -> "Месяц $selectedMonth"
+                                    1 -> getString(context,R.string.january,pref.getLanguage()); 2 -> getString(context,R.string.february,pref.getLanguage()); 3 -> getString(context,R.string.march,pref.getLanguage()); 4 -> getString(context,R.string.april,pref.getLanguage())
+                                    5 -> getString(context,R.string.may,pref.getLanguage()); 6 -> getString(context,R.string.june,pref.getLanguage()); 7 -> getString(context,R.string.july,pref.getLanguage()); 8 ->getString(context,R.string.august,pref.getLanguage())
+                                    9 -> getString(context,R.string.september,pref.getLanguage()); 10 -> getString(context,R.string.october,pref.getLanguage()); 11 -> getString(context,R.string.november,pref.getLanguage()); 12 ->  getString(context,R.string.december,pref.getLanguage())
+                                    else -> getString(context,R.string.month,pref.getLanguage())
                                 }
                                 append(", $monthName")
                             }
                         }
                         if (selectedOpponent != null) {
                             if (isNotEmpty()) append(", ")
-                            append("Соперник: $selectedOpponent")
+                            append(getString(context,R.string.opponent,pref.getLanguage())+":"+"${selectedOpponent}")
                         }
-                        if (isEmpty()) append("Все время")
+                        if (isEmpty()) append(getString(context,R.string.all_time,pref.getLanguage()))
                     }
 
                     Text(
@@ -613,7 +598,7 @@ private fun FilterIndicator(
 
                 TextButton(onClick = onClear) {
                     Text(
-                        text = "Очистить",
+                        text = getString(context,R.string.clear,pref.getLanguage()),
                         color = Color(139, 0, 0),
                         fontSize = 12.sp
                     )
@@ -624,7 +609,7 @@ private fun FilterIndicator(
 }
 
 @Composable
-private fun OverallStatisticsCard(statistics: StatisticsData) {
+private fun OverallStatisticsCard(statistics: StatisticsData, context:Context, pref: SharedPrefsManager) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(44, 44, 51)),
         modifier = Modifier.fillMaxWidth()
@@ -634,66 +619,64 @@ private fun OverallStatisticsCard(statistics: StatisticsData) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Общая статистика",
+                text = getString(context,R.string.general_statistics,pref.getLanguage()),
                 color = Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            // Показатели в ряд
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatItem(
                     value = statistics.totalBouts.toString(),
-                    label = "Бои",
+                    label = getString(context,R.string.bouts,pref.getLanguage()),
                     color = Color.White
                 )
 
                 StatItem(
                     value = statistics.victories.toString(),
-                    label = "Победы",
+                    label = getString(context,R.string.victories,pref.getLanguage()),
                     color = Color(0xFF4CAF50)
                 )
 
                 StatItem(
                     value = statistics.defeats.toString(),
-                    label = "Поражения",
+                    label = getString(context,R.string.defeats,pref.getLanguage()),
                     color = Color(0xFFF44336)
                 )
 
                 StatItem(
                     value = statistics.draws.toString(),
-                    label = "Ничьи",
+                    label = getString(context,R.string.draws,pref.getLanguage()),
                     color = Color(0xFFFF9800)
                 )
             }
 
-            // Уколы
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatItem(
                     value = statistics.userScore.toString(),
-                    label = "Нанесено",
+                    label =getString(context,R.string.given,pref.getLanguage()),
                     color = Color(0xFF2196F3)
                 )
 
                 StatItem(
                     value = statistics.opponentScore.toString(),
-                    label = "Получено",
+                    label =getString(context,R.string.recieved,pref.getLanguage()),
                     color = Color(0xFFFF5722)
                 )
 
                 val ratio = if (statistics.opponentScore > 0) {
-                    String.format("%.2f", statistics.victories.toFloat() / statistics.totalBouts*100)
+                    String.format("%.2f", statistics.victories.toFloat() / statistics.totalBouts*100)+"%"
                 } else "∞"
 
                 StatItem(
                     value = ratio,
-                    label = "Коэф.",
+                    label = getString(context,R.string.victories_given,pref.getLanguage()),
                     color = Color(0xFF9C27B0)
                 )
             }
@@ -702,40 +685,44 @@ private fun OverallStatisticsCard(statistics: StatisticsData) {
 }
 
 @Composable
-private fun WeaponHandStatistics(statistics: StatisticsData) {
+private fun WeaponHandStatistics(statistics: StatisticsData, context: Context, pref: SharedPrefsManager) {
     if (statistics.byWeaponHand.isNotEmpty()) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "По ведущей руке",
+                text = getString(context,R.string.by_weapon_hand,pref.getLanguage()),
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            // Таблица статистики по рукам
             StatisticsTable(
                 categories = statistics.byWeaponHand.mapValues { it.value },
-                columnNames = listOf("Рука", "Б", "V", "D", "N", "У+", "У-")
+                columnNames = listOf(getString(context,R.string.hand,pref.getLanguage()), getString(context,R.string.bouts_design,pref.getLanguage()),
+                    "V", "D", "N",
+                    getString(context,R.string.given_score_des,pref.getLanguage()),
+                    getString(context,R.string.recieved_score_des,pref.getLanguage()))
             )
         }
     }
 }
 
 @Composable
-private fun WeaponTypeStatistics(statistics: StatisticsData) {
+private fun WeaponTypeStatistics(statistics: StatisticsData, context: Context, pref: SharedPrefsManager) {
     if (statistics.byWeaponType.isNotEmpty()) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "По виду оружия",
+                text = getString(context,R.string.by_weapon_type,pref.getLanguage()),
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            // Таблица статистики по оружию
             StatisticsTable(
                 categories = statistics.byWeaponType.mapValues { it.value },
-                columnNames = listOf("Оружие", "Б", "V", "D", "N", "У+", "У-")
+                columnNames = listOf(getString(context,R.string.weapon,pref.getLanguage()), getString(context,R.string.bouts_design,pref.getLanguage()),
+                    "V", "D", "N",
+                    getString(context,R.string.given_score_des,pref.getLanguage()),
+                    getString(context,R.string.recieved_score_des,pref.getLanguage()))
             )
         }
     }
@@ -744,14 +731,14 @@ private fun WeaponTypeStatistics(statistics: StatisticsData) {
 @Composable
 private fun StatisticsTable(
     categories: Map<String, StatsByCategory>,
-    columnNames: List<String>
+    columnNames: List<String>,
+
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(61, 61, 70)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column {
-            // Заголовок таблицы
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -762,8 +749,8 @@ private fun StatisticsTable(
                     Box(
                         modifier = Modifier.weight(
                             when (index) {
-                                0 -> 1.5f // Название категории
-                                else -> 1f // Числовые колонки
+                                0 -> 1.5f
+                                else -> 1f
                             }
                         ),
                         contentAlignment = Alignment.Center
@@ -778,14 +765,13 @@ private fun StatisticsTable(
                 }
             }
 
-            // Данные таблицы
             categories.forEach { (categoryName, stats) ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp, horizontal = 12.dp)
                 ) {
-                    // Название категории
+
                     Box(
                         modifier = Modifier.weight(1.5f),
                         contentAlignment = Alignment.CenterStart
@@ -797,7 +783,6 @@ private fun StatisticsTable(
                         )
                     }
 
-                    // Бои
                     Box(
                         modifier = Modifier.weight(1f),
                         contentAlignment = Alignment.Center
@@ -809,7 +794,6 @@ private fun StatisticsTable(
                         )
                     }
 
-                    // Победы
                     Box(
                         modifier = Modifier.weight(1f),
                         contentAlignment = Alignment.Center
@@ -821,7 +805,6 @@ private fun StatisticsTable(
                         )
                     }
 
-                    // Поражения
                     Box(
                         modifier = Modifier.weight(1f),
                         contentAlignment = Alignment.Center
@@ -833,7 +816,6 @@ private fun StatisticsTable(
                         )
                     }
 
-                    // Ничьи
                     Box(
                         modifier = Modifier.weight(1f),
                         contentAlignment = Alignment.Center
@@ -845,7 +827,6 @@ private fun StatisticsTable(
                         )
                     }
 
-                    // Нанесено уколов
                     Box(
                         modifier = Modifier.weight(1f),
                         contentAlignment = Alignment.Center
@@ -857,7 +838,7 @@ private fun StatisticsTable(
                         )
                     }
 
-                    // Получено уколов
+
                     Box(
                         modifier = Modifier.weight(1f),
                         contentAlignment = Alignment.Center
@@ -870,7 +851,6 @@ private fun StatisticsTable(
                     }
                 }
 
-                // Разделитель
                 if (categoryName != categories.keys.last()) {
                     Divider(
                         color = Color(100, 100, 100),
@@ -887,12 +867,14 @@ private fun StatisticsTable(
 private fun OpponentStatistics(
     statistics: StatisticsData,
     onOpponentClick: (Long) -> Unit,
-    selectedOpponentId:Long?
+    selectedOpponentId:Long?,
+    context: Context,
+    pref: SharedPrefsManager
 ) {
     if (statistics.byOpponent.isNotEmpty()) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "По соперникам",
+                text = getString(context,R.string.by_opponents,pref.getLanguage()),
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
@@ -906,7 +888,9 @@ private fun OpponentStatistics(
                     OpponentStatCard(
                         stats = stats,
                         isSelected = selectedOpponentId == stats.opponentId,
-                        onClick = { onOpponentClick(stats.opponentId) }
+                        onClick = { onOpponentClick(stats.opponentId) },
+                        context,
+                        pref
                     )
                 }
             }
@@ -918,7 +902,9 @@ private fun OpponentStatistics(
 private fun OpponentStatCard(
     stats: OpponentStats,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    context: Context,
+    pref: SharedPrefsManager
 ) {
     Card(
         colors = CardDefaults.cardColors(
@@ -947,19 +933,18 @@ private fun OpponentStatCard(
                 )
 
                 Text(
-                    text = "${stats.bouts} боев • ${stats.victories}V/${stats.defeats}D/${stats.draws}N",
+                    text = "${stats.bouts}" +getString(context,R.string.bouts_given,pref.getLanguage())+" • ${stats.victories}V/${stats.defeats}D/${stats.draws}N",
                     color = Color(200, 200, 200),
                     fontSize = 12.sp
                 )
 
                 Text(
-                    text = "Уколы: ${stats.userScore}+ / ${stats.opponentScore}-",
+                    text = getString(context,R.string.score,pref.getLanguage()) +":"+" ${stats.userScore}+ / ${stats.opponentScore}-",
                     color = Color(200, 200, 200),
                     fontSize = 12.sp
                 )
             }
 
-            // Процент побед
             val winRate = if (stats.bouts > 0) {
                 (stats.victories.toFloat() / stats.bouts * 100).toInt()
             } else 0
@@ -989,7 +974,7 @@ private fun OpponentStatCard(
 }
 
 @Composable
-private fun LegendSection() {
+private fun LegendSection(context: Context, pref: SharedPrefsManager) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(44, 44, 51)),
         modifier = Modifier.fillMaxWidth()
@@ -999,19 +984,21 @@ private fun LegendSection() {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "Обозначения:",
+                text = getString(context,R.string.designations,pref.getLanguage()),
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            LegendItem("Б", "Бои (количество)")
-            LegendItem("V", "Победы (Victories)")
-            LegendItem("D", "Поражения (Defeats)")
-            LegendItem("N", "Ничьи (Draws)")
-            LegendItem("У+", "Нанесено уколов")
-            LegendItem("У-", "Получено уколов")
-            LegendItem("Коэф.", "Коэффициент (Нанесено/Получено)")
+            LegendItem(getString(context,R.string.bouts_design,pref.getLanguage()), getString(context,R.string.bouts_count,pref.getLanguage()))
+            LegendItem("V", getString(context,R.string.victoties_des,pref.getLanguage()))
+            LegendItem("D", getString(context,R.string.defeats_des,pref.getLanguage()))
+            LegendItem("N", getString(context,R.string.draws_des,pref.getLanguage()))
+            LegendItem(getString(context,R.string.given_score_des,pref.getLanguage()), getString(context,R.string.given_des,pref.getLanguage()))
+            LegendItem(getString(context,R.string.recieved_score_des,pref.getLanguage()), getString(context,R.string.recieved_des,pref.getLanguage()))
+            LegendItem(getString(context,R.string.victories_given,pref.getLanguage()),
+                getString(context,R.string.percent_victories,pref.getLanguage())
+            )
         }
     }
 }

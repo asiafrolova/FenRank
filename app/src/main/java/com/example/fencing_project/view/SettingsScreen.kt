@@ -55,7 +55,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontWeight.Companion.Bold
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -63,18 +66,15 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.fencing_project.R
-
+import com.example.fencing_project.getString
 import com.example.fencing_project.utils.SharedPrefsManager
-
-
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.view.components.ExportDataDialog
 import com.example.fencing_project.view.components.ImportDataDialog
 import com.example.fencing_project.view.components.RestoreDataDialog
+import com.example.fencing_project.view.components.SyncDataDialog
 import com.example.fencing_project.viewmodel.ProfileViewModel
 import com.example.fencing_project.viewmodel.SyncViewModel
-import io.github.jan.supabase.gotrue.providers.invoke
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -84,34 +84,30 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(navController: NavController,
                          pref: SharedPrefsManager,
                    viewModel: ProfileViewModel= hiltViewModel(),
-                   syncViewModel : SyncViewModel = hiltViewModel()
+                   syncViewModel : SyncViewModel = hiltViewModel(),
+
                   ){
-
-
-
-
-
-
 
 
     var showRestoreDialog by remember { mutableStateOf(false) }
 
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
+    var showSyncConfirmationDialog by remember {mutableStateOf(false)}
     var userId = pref.getUserId()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-    val menuItemsLanguages= listOf("Английский", "Русский")
-    var language by remember { mutableStateOf("") }
+    val menuItemsLanguages= listOf("English", "Русский")
+    var language by remember { mutableStateOf(if(pref.getLanguage()=="en"){"English"}else{"Русский"} )}
     var expandedLanguage by remember { mutableStateOf(false) }
 
-    // Состояния для диалогов
+
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var successMessage by remember { mutableStateOf("") }
 
     val deleteState by viewModel.deleteProfileState.collectAsState()
-    //val isLoading = deleteState is UIState.Loading
+    val context = LocalContext.current
 
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
@@ -120,43 +116,62 @@ fun SettingsScreen(navController: NavController,
     val deleteAccountState by viewModel.deleteProfileState.collectAsState()
 
 
+
     val syncState by syncViewModel.syncState.collectAsState()
     val isLoading = deleteAccountState is UIState.Loading || syncState is UIState.Loading
 
             LaunchedEffect(syncState) {
         if (syncState is UIState.Success || syncState is UIState.Error) {
-            // Автоматически возвращаемся через 3 секунды
-            // Можно убрать, если не нужно
         }
     }
+
+
     if (showRestoreDialog) {
         RestoreDataDialog(
-            onDismiss = { showRestoreDialog = false }
+            onDismiss = { showRestoreDialog = false },
+            context=context,
+            pref=pref
         )
     }
 
+    if (showSyncConfirmationDialog) {
+        SyncDataDialog(
+
+            onDismiss = {
+                showSyncConfirmationDialog = false
+            },
+            text = getString(context,R.string.you_want_sync,pref.getLanguage()),
+            dismissText = getString(context,R.string.no,pref.getLanguage()),
+            context=context,
+            pref=pref
+        )
+    }
 
 
     if (showExportDialog && userId != null) {
         ExportDataDialog(
             onDismiss = { showExportDialog = false },
-            userId = userId
+            userId = userId,
+            context = context,
+            pref=pref
         )
     }
     if (showImportDialog && userId != null) {
         ImportDataDialog(
             onDismiss = { showImportDialog = false },
-            userId = userId
+            userId = userId,
+            context = context,
+            pref=pref
         )
     }
-    // Добавь в SettingsScreen после других LaunchedEffect
+
     LaunchedEffect(deleteAccountState) {
         when (deleteAccountState) {
             is UIState.Success -> {
-                successMessage = "Аккаунт успешно удален"
+                successMessage = getString(context,R.string.account_delete_successfull,pref.getLanguage())
                 showSuccessDialog = true
 
-                // Через 2 секунды переходим на логин
+
                 delay(2000)
                 navController.navigate("login") {
                     popUpTo(0) { inclusive = true }
@@ -165,7 +180,7 @@ fun SettingsScreen(navController: NavController,
             is UIState.Error -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
-                        message = "Ошибка: ${(deleteAccountState as UIState.Error).message}",
+                        message = getString(context,R.string.error,pref.getLanguage()),
                         actionLabel = "OK",
                         duration = SnackbarDuration.Short
                     )
@@ -175,7 +190,7 @@ fun SettingsScreen(navController: NavController,
         }
     }
 
-    // Диалог подтверждения удаления
+
     if (showDeleteConfirmationDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -184,13 +199,13 @@ fun SettingsScreen(navController: NavController,
             },
             title = {
                 Text(
-                    "Удалить аккаунт навсегда?",
+                    getString(context,R.string.delete_account_forever,pref.getLanguage()),
                     color = Color.White
                 )
             },
             text = {
                 Text(
-                    "Вы уверены, что хотите удалить аккаунт? Восстановить данные будет не возможно.",
+                    getString(context,R.string.you_sure_delete_account_forever,pref.getLanguage()),
                     color = Color.White
                 )
             },
@@ -207,7 +222,7 @@ fun SettingsScreen(navController: NavController,
                         contentColor =Color.White
                     )
                 ) {
-                    Text("Удалить")
+                    Text(getString(context,R.string.delete_btn,pref.getLanguage()))
                 }
             },
             dismissButton = {
@@ -220,16 +235,13 @@ fun SettingsScreen(navController: NavController,
                         contentColor = Color.White
                     )
                 ) {
-                    Text("Отмена")
+                    Text(getString(context,R.string.cancel,pref.getLanguage()))
                 }
             }
         )
     }
 
-    // SettingsScreen.kt - добавь эти состояния в начало
 
-
-// Добавь после showDeleteConfirmationDialog
     if (showPasswordDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -238,12 +250,12 @@ fun SettingsScreen(navController: NavController,
                 viewModel.resetDeleteAccountState()
             },
             title = {
-                Text("Введите пароль для подтверждения", color = Color.White)
+                Text(getString(context,R.string.enter_password_for_confirm,pref.getLanguage()), color = Color.White)
             },
             text = {
                 Column {
                     Text(
-                        "Введите ваш текущий пароль для удаления аккаунта:",
+                        getString(context,R.string.enter_password_for_delete,pref.getLanguage()),
                         color = Color.White,
                         fontSize = 14.sp
                     )
@@ -267,7 +279,7 @@ fun SettingsScreen(navController: NavController,
                             .fillMaxWidth()
                             .padding(horizontal = 10.dp),
                         shape = RoundedCornerShape(20.dp),
-                        placeholder = {Text(text="Введите текущий пароль", color=Color.White)},
+                        placeholder = {Text(text=getString(context,R.string.enter_current_password,pref.getLanguage()), color=Color.White)},
                         visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { showPassword = !showPassword }) {
@@ -303,7 +315,7 @@ fun SettingsScreen(navController: NavController,
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Удалить аккаунт")
+                        Text(getString(context,R.string.delete_account,pref.getLanguage()))
                     }
                 }
             },
@@ -319,13 +331,13 @@ fun SettingsScreen(navController: NavController,
                         contentColor = Color.White
                     )
                 ) {
-                    Text("Отмена")
+                    Text(getString(context,R.string.cancel,pref.getLanguage()))
                 }
             }
         )
     }
 
-    // Диалог успешного действия
+
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -334,7 +346,7 @@ fun SettingsScreen(navController: NavController,
             },
             title = {
                 Text(
-                    "Успешно",
+                    getString(context,R.string.successfull,pref.getLanguage()),
                     color = Color.White
                 )
             },
@@ -365,7 +377,7 @@ fun SettingsScreen(navController: NavController,
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Настройки", color = Color.White) },
+                title = { Text(getString(context,R.string.settings,pref.getLanguage()), color = Color.White) },
                 navigationIcon = {
                     IconButton(
                         onClick = { navController.popBackStack() },
@@ -404,13 +416,17 @@ fun SettingsScreen(navController: NavController,
                 ExposedDropdownMenuBox(
                     expanded = expandedLanguage,
                     onExpandedChange = { expandedLanguage = !expandedLanguage },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp)
                 ) {
                     OutlinedTextField(
                         value = language,
-                        onValueChange = {},
+                        onValueChange = {
+
+                        },
                         readOnly = true,
-                        label = { Text("Язык") },
+                        label = { Text(getString(context,R.string.language,pref.getLanguage())) },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedLanguage)
                         },
@@ -425,7 +441,9 @@ fun SettingsScreen(navController: NavController,
                             focusedContainerColor = Color(44, 44, 51),
                             unfocusedContainerColor = Color(44, 44, 51)
                         ),
-                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
                         shape = RoundedCornerShape(20.dp),
                     )
 
@@ -437,6 +455,8 @@ fun SettingsScreen(navController: NavController,
                             DropdownMenuItem(
                                 text = { Text(item) },
                                 onClick = {
+                                    val langCode = if(item=="English"){"en"}else{"ru"}
+                                    pref.setLanguage(langCode)
                                     language = item
                                     expandedLanguage = false
                                 }
@@ -447,7 +467,7 @@ fun SettingsScreen(navController: NavController,
                 Button(
 
                     onClick = {
-                        //showDeleteConfirmationDialog=true
+
                         showPasswordDialog = true},
                     modifier = Modifier
                         .fillMaxWidth()
@@ -461,7 +481,7 @@ fun SettingsScreen(navController: NavController,
                     shape = RoundedCornerShape(20.dp),
                     enabled = !pref.isOffline()
                 ) {
-                    Text("Удалить профиль", fontSize = 15.sp, modifier = Modifier.padding(5.dp))
+                    Text(getString(context,R.string.delete_account,pref.getLanguage()), fontSize = 15.sp, modifier = Modifier.padding(5.dp))
 
                 }
 
@@ -481,14 +501,14 @@ fun SettingsScreen(navController: NavController,
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "Экспорт данных",
+                            text = getString(context,R.string.export_data,pref.getLanguage()),
                             color = Color.White,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Сохраните все ваши данные в файл Excel для резервного копирования.",
+                            text =getString(context,R.string.save_you_data_excel,pref.getLanguage()),
                             color = Color.White,
                             fontSize = 14.sp
                         )
@@ -508,7 +528,7 @@ fun SettingsScreen(navController: NavController,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Экспорт в Excel")
+                            Text(getString(context,R.string.export_excel,pref.getLanguage()))
                         }
                     }
                 }
@@ -524,14 +544,14 @@ fun SettingsScreen(navController: NavController,
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "Импорт данных",
+                            text = getString(context,R.string.import_data,pref.getLanguage()),
                             color = Color.White,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Загрузите данные из ранее экспортированного файла Excel.",
+                            text = getString(context,R.string.load_data_excel,pref.getLanguage()),
                             color = Color.White,
                             fontSize = 14.sp
                         )
@@ -546,12 +566,12 @@ fun SettingsScreen(navController: NavController,
                             )
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.resource_import), // Создайте иконку или используйте существующую
+                                painter = painterResource(R.drawable.resource_import),
                                 contentDescription = "Импорт",
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Импорт из Excel")
+                            Text(getString(context,R.string.import_excel,pref.getLanguage()))
                         }
                     }
                 }
@@ -572,21 +592,23 @@ fun SettingsScreen(navController: NavController,
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "Создать резервную копию",
+                            text = getString(context,R.string.create_backup,pref.getLanguage()),
                             color = Color.White,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Загрузка данных в облако начнется в фновом режиме",
+                            text = getString(context,R.string.load_data_backup,pref.getLanguage()),
                             color = Color.White,
                             fontSize = 14.sp
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             enabled = !pref.isOffline(),
-                            onClick = { syncViewModel.startBackgroundSync() },
+                            onClick = {
+                                showSyncConfirmationDialog=true
+                                 },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(139, 0, 0),
@@ -594,12 +616,12 @@ fun SettingsScreen(navController: NavController,
                             )
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.sync), // Добавьте иконку
-                                contentDescription = "Фоновая синхронизация",
+                                painter = painterResource(R.drawable.sync),
+                                contentDescription = getString(context,R.string.background_sync,pref.getLanguage()),
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Запустить резервное копирование")
+                            Text(getString(context,R.string.start_sync,pref.getLanguage()))
                         }
                     }
                 }
@@ -620,14 +642,14 @@ fun SettingsScreen(navController: NavController,
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "Автоматическая синхронизация",
+                            text = getString(context,R.string.automatic_sync,pref.getLanguage()),
                             color = Color.White,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Настройте автоматическую синхронизацию по расписанию",
+                            text = getString(context,R.string.set_up_sync,pref.getLanguage()),
                             color = Color.White,
                             fontSize = 14.sp
                         )
@@ -647,24 +669,37 @@ fun SettingsScreen(navController: NavController,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Настроить расписание")
+                            Text(getString(context,R.string.set_up_schedule,pref.getLanguage()))
                         }
                     }
                 }
                 Button(
                     onClick = {
                         showRestoreDialog = true},
-                    //syncViewModel.loadDataFromCloud() },
-                    modifier = Modifier.padding(horizontal = 10.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .padding(horizontal = 10.dp)
+                        .fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(44, 44, 51)
                     ),
                     shape = RoundedCornerShape(20.dp),
                     enabled = syncState !is UIState.Loading && !pref.isOffline()
                 ) {
-                    Text("Загрузить резервную копию", fontSize = 16.sp)
+                    Text(getString(context,R.string.download_sync,pref.getLanguage()), fontSize = 16.sp)
                 }
 
+                Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(painter = painterResource(R.drawable.github_invertocat_white_clearspace),
+                        contentDescription = "github",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .padding(horizontal = 4.dp),
+                        tint = Color.White)
+                    Text(text="github.com/asiafrolova/FenRank", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp))
 
 
             }
@@ -687,7 +722,7 @@ fun SettingsScreen(navController: NavController,
                             strokeWidth = 4.dp
                         )
                         Text(
-                            text = "Сохранение..."
+                            text = getString(context,R.string.save,pref.getLanguage())
                             ,
                             color = Color.White,
                             fontSize = 16.sp

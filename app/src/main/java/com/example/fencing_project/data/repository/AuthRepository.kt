@@ -1,8 +1,6 @@
 package com.example.fencing_project.data.repository
 
 import android.content.Context
-import com.example.fencing_project.data.model.Opponent
-import com.example.fencing_project.data.model.Sync
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
@@ -19,7 +17,6 @@ class AuthRepository @Inject constructor(
     val pref =SharedPrefsManager(context)
     val currentUser = MutableStateFlow<FirebaseUser?>(firebaseAuth.currentUser)
     init {
-        // Слушаем изменения аутентификации
         firebaseAuth.addAuthStateListener { auth ->
             currentUser.value = auth.currentUser
         }
@@ -44,15 +41,12 @@ class AuthRepository @Inject constructor(
             val user = firebaseAuth.currentUser
                 ?: return Result.failure(Exception("Пользователь не авторизован"))
 
-            // Реаутентификация
             val reauthResult = firebaseAuth.signInWithEmailAndPassword(
                 currentEmail,
                 currentPassword
             ).await()
 
             if (reauthResult.user != null) {
-                // Используем verifyBeforeUpdateEmail
-                //user.verifyBeforeUpdateEmail(newEmail).await()
                 user.updateEmail(newEmail).await()
 
                 Result.success(Unit)
@@ -63,8 +57,6 @@ class AuthRepository @Inject constructor(
             Result.failure(e)
         }
     }
-
-    // Получаем текущего пользователя с обновленными данными
     fun getCurrentUser(): FirebaseUser?{
         return currentUser.value
     }
@@ -84,7 +76,6 @@ class AuthRepository @Inject constructor(
                 return Result.failure(Exception("Пользователь не авторизован. Войдите заново."))
             }
 
-            // СНАЧАЛА пробуем аутентифицироваться с текущими данными
             try {
                 val signInResult = firebaseAuth.signInWithEmailAndPassword(
                     currentEmail,
@@ -98,31 +89,25 @@ class AuthRepository @Inject constructor(
                 return Result.failure(Exception("Неверный текущий пароль: ${e.message}"))
             }
 
-            // Теперь пробуем ре-аутентификацию через credential
             val credential = EmailAuthProvider.getCredential(currentEmail, currentPassword)
 
             try {
                 user.reauthenticate(credential).await()
             } catch (e: Exception) {
-                println("DEBUG: Ошибка reauthenticate: ${e.message}")
-
-                // Альтернатива: просто обновляем пароль после успешного signIn
                 val currentUser = firebaseAuth.currentUser
                 currentUser?.updatePassword(newPassword)?.await()
                 return Result.success(Unit)
             }
 
-            // Обновление пароля
             user.updatePassword(newPassword).await()
             Result.success(Unit)
 
         } catch (e: Exception) {
-            println("DEBUG: Общая ошибка updatePassword: ${e.message}")
             e.printStackTrace()
             Result.failure(e)
         }
     }
-    // Альтернативный способ через sendPasswordResetEmail
+
     suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
         return try {
             firebaseAuth.sendPasswordResetEmail(email).await()
@@ -150,18 +135,12 @@ suspend fun login(email: String, password: String): Result<FirebaseUser> {
             val user = firebaseAuth.currentUser
                 ?: return Result.failure(Exception("Пользователь не авторизован"))
 
-            println("DEBUG: удаляем firebase account")
-            // Реаутентификация (требуется для удаления)
             val credential = EmailAuthProvider.getCredential(user.email ?: "", currentPassword)
             user.reauthenticate(credential).await()
-
-            // Удаляем аккаунт
             user.delete().await()
-            println("DEBUG: удалили успешно")
             Result.success(Unit)
 
         } catch (e: Exception) {
-            println("DEBUG: удалили с ошибкой $e")
             Result.failure(e)
         }
     }

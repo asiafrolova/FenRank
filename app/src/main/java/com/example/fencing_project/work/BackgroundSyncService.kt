@@ -47,8 +47,10 @@ class BackgroundSyncService : Service() {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
+
             } else {
                 context.startService(intent)
+
             }
         }
 
@@ -65,8 +67,6 @@ class BackgroundSyncService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val userId = intent?.getStringExtra(EXTRA_USER_ID) ?: return START_NOT_STICKY
         val showNotification = intent.getBooleanExtra(EXTRA_SHOW_NOTIFICATION, true)
-
-        // Создаем начальное уведомление
         val notification = createNotification("Начинаем синхронизацию...", 0, false)
         startForeground(NOTIFICATION_ID, notification)
 
@@ -80,21 +80,13 @@ class BackgroundSyncService : Service() {
                             "Синхронизация не удалась: нет интернета"
                         )
                     }
-                    Thread.sleep(3000)
                     stopSelf()
                     return@launch
                 }
-                // Шаг 1: Подготовка
                 updateNotification("Подготовка данных...", 10, true)
-                Thread.sleep(500)
-
-                // Шаг 2: Синхронизация
                 updateNotification("Синхронизация данных...", 30, true)
                 syncRepository.syncWithFirebase(userId)
-
-                // Шаг 3: Завершение
                 updateNotification("Синхронизация завершена", 100, true)
-                Thread.sleep(2000)
                 if (showNotification) {
                     NotificationHelper.showSyncSuccessNotification(
                         this@BackgroundSyncService,
@@ -102,8 +94,6 @@ class BackgroundSyncService : Service() {
                     )
                 }
 
-
-                // Останавливаем сервис
                 stopSelf()
             } catch (e: Exception) {
                 updateNotification("Ошибка: ${e.message?.take(50) ?: "неизвестная"}", 0, false)
@@ -113,7 +103,6 @@ class BackgroundSyncService : Service() {
                         e.message ?: "Ошибка синхронизации"
                     )
                 }
-                Thread.sleep(3000)
                 stopSelf()
             }
         }
@@ -152,7 +141,7 @@ class BackgroundSyncService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Синхронизация")
             .setContentText(text)
-            .setSmallIcon(R.drawable.sync) // Создайте эту иконку или используйте другую
+            .setSmallIcon(R.drawable.sync)
             .setProgress(100, progress, indeterminate)
             .setOngoing(true)
             .setOnlyAlertOnce(true)

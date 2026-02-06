@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -19,13 +18,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -44,8 +41,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -53,11 +50,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.fencing_project.R
+import com.example.fencing_project.getString
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
-import com.example.fencing_project.view.components.BottomNavigationBar
 import com.example.fencing_project.viewmodel.ProfileViewModel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,8 +75,6 @@ fun ProfileEditScreen(navController: NavController,
     val updatePasswordState by viewModel.updatePasswordState.collectAsState()
     val updatePasswordStateSimple by viewModel.updatePasswordState.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
-
-    // Состояния для диалогов
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
 
@@ -89,6 +83,7 @@ fun ProfileEditScreen(navController: NavController,
     val isLoading = updatePasswordState is UIState.Loading || updateEmailState is UIState.Loading || updateState is UIState.Loading || updatePasswordStateSimple is UIState.Loading
 
     val user = viewModel.getCurrentUser()
+    val context = LocalContext.current
 
     var showPassword = remember { mutableStateOf(false) }
     var retryShowPassword = remember { mutableStateOf(false) }
@@ -102,14 +97,14 @@ fun ProfileEditScreen(navController: NavController,
     LaunchedEffect(updatePasswordState) {
         when (updatePasswordState) {
             is UIState.Success -> {
-                successMessage="Пароль успешно сменен"
+                successMessage= getString(context,R.string.password_change_successfull,pref.getLanguage())
                 showSuccessDialog = true
                 viewModel.resetState()
             }
             is UIState.Error -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
-                        message = "Ошибка: ${(updatePasswordState as UIState.Error).message}",
+                        message = getString(context,R.string.error,pref.getLanguage()),
                         actionLabel = "OK",
                         duration = SnackbarDuration.Short
                     )
@@ -123,14 +118,14 @@ fun ProfileEditScreen(navController: NavController,
     LaunchedEffect(updateEmailState) {
         when (updateEmailState) {
             is UIState.Success -> {
-                successMessage="Почта успешно изменена"
+                successMessage= getString(context,R.string.email_change_successfull,pref.getLanguage())
                 showSuccessDialog = true
                 viewModel.resetState()
             }
             is UIState.Error -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
-                        message = "Ошибка: ${(updateEmailState as UIState.Error).message}",
+                        message = getString(context,R.string.error,pref.getLanguage()),
                         actionLabel = "OK",
                         duration = SnackbarDuration.Short
                     )
@@ -149,7 +144,7 @@ fun ProfileEditScreen(navController: NavController,
             is UIState.Error -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
-                        message = "Ошибка: ${(updateState as UIState.Error).message}",
+                        message =getString(context,R.string.error,pref.getLanguage()),
                         actionLabel = "OK",
                         duration = SnackbarDuration.Short
                     )
@@ -160,7 +155,6 @@ fun ProfileEditScreen(navController: NavController,
         }
     }
 
-    // Диалог подтверждения удаления
     if (showDeleteConfirmationDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -169,13 +163,13 @@ fun ProfileEditScreen(navController: NavController,
             },
             title = {
                 Text(
-                    "Очистить изображение профиля?",
+                    getString(context,R.string.clear_profile_image,pref.getLanguage()),
                     color = Color.White
                 )
             },
             text = {
                 Text(
-                    "Вы уверены, что хотите очистить изображение профиля? (Возможна задержка обновления изображения после очистки)",
+                    getString(context,R.string.you_sure_clear_image,pref.getLanguage()),
                     color = Color.White
                 )
             },
@@ -192,7 +186,7 @@ fun ProfileEditScreen(navController: NavController,
                         contentColor =Color.White
                     )
                 ) {
-                    Text("Удалить")
+                    Text(getString(context,R.string.delete_btn,pref.getLanguage()))
                 }
             },
             dismissButton = {
@@ -205,13 +199,13 @@ fun ProfileEditScreen(navController: NavController,
                         contentColor = Color.White
                     )
                 ) {
-                    Text("Отмена")
+                    Text(getString(context,R.string.cancel,pref.getLanguage()))
                 }
             }
         )
     }
 
-    // Диалог успешного действия
+
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -220,7 +214,7 @@ fun ProfileEditScreen(navController: NavController,
             },
             title = {
                 Text(
-                    "Успешно",
+                    getString(context,R.string.successfull,pref.getLanguage()),
                     color = Color.White
                 )
             },
@@ -253,7 +247,7 @@ fun ProfileEditScreen(navController: NavController,
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Редактировать профиль", color = Color.White) },
+                title = { Text(getString(context,R.string.change_profile,pref.getLanguage()), color = Color.White) },
                 navigationIcon = {
                     IconButton(
                         onClick = { navController.popBackStack() },
@@ -292,7 +286,7 @@ fun ProfileEditScreen(navController: NavController,
                 OutlinedTextField(
                     value = email,
                     onValueChange = {email = it },
-                    label = { Text("Email") },
+                    label = { Text(getString(context,R.string.email,pref.getLanguage())) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
@@ -330,7 +324,7 @@ fun ProfileEditScreen(navController: NavController,
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp),
                     shape = RoundedCornerShape(20.dp),
-                    placeholder = {Text(text="Введите текущий пароль", color=Color.White)},
+                    placeholder = {Text(text= getString(context,R.string.enter_current_password,pref.getLanguage()), color=Color.White)},
                     visualTransformation = if (showOldEmailPassword.value) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = { showOldEmailPassword.value = !showOldEmailPassword.value }) {
@@ -360,12 +354,12 @@ fun ProfileEditScreen(navController: NavController,
                                 when {
                                     email.isBlank() ->
                                         snackbarHostState.showSnackbar(
-                                            message = "Введите почту",
+                                            message = getString(context,R.string.enter_email,pref.getLanguage()),
                                             duration = SnackbarDuration.Short
                                         )
                                     email.isNotBlank() && oldEmailPassword.isBlank()->
                                         snackbarHostState.showSnackbar(
-                                            message = "Введите текущий пароль",
+                                            message = getString(context,R.string.enter_current_password,pref.getLanguage()),
                                             duration = SnackbarDuration.Short
                                         )
 
@@ -384,7 +378,7 @@ fun ProfileEditScreen(navController: NavController,
                     ),
                     shape = RoundedCornerShape(20.dp)
                 ) {
-                    Text("Сменить почту", fontSize = 15.sp, modifier = Modifier.padding(5.dp))
+                    Text(getString(context,R.string.change_email,pref.getLanguage()), fontSize = 15.sp, modifier = Modifier.padding(5.dp))
 
                 }
                 OutlinedTextField(
@@ -405,7 +399,7 @@ fun ProfileEditScreen(navController: NavController,
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp),
                     shape = RoundedCornerShape(20.dp),
-                    placeholder = {Text(text="Введите текущий пароль", color=Color.White)},
+                    placeholder = {Text(text=getString(context,R.string.enter_current_password,pref.getLanguage()), color=Color.White)},
                     visualTransformation = if (showOldPassword.value) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = { showOldPassword.value = !showOldPassword.value }) {
@@ -437,7 +431,7 @@ fun ProfileEditScreen(navController: NavController,
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp),
                     shape = RoundedCornerShape(20.dp),
-                    placeholder = {Text(text="Введите новый пароль", color = Color.White)},
+                    placeholder = {Text(text= getString(context,R.string.enter_new_password,pref.getLanguage()), color = Color.White)},
                     visualTransformation = if (showPassword.value) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = { showPassword.value = !showPassword.value }) {
@@ -470,7 +464,7 @@ fun ProfileEditScreen(navController: NavController,
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp),
                     shape = RoundedCornerShape(20.dp),
-                    placeholder = {Text(text="Подтвердите новый пароль", color = Color.White)},
+                    placeholder = {Text(text= getString(context,R.string.confirm_new_password,pref.getLanguage()), color = Color.White)},
                     visualTransformation = if (retryShowPassword.value) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = { retryShowPassword.value = !retryShowPassword.value }) {
@@ -487,9 +481,9 @@ fun ProfileEditScreen(navController: NavController,
                 )
                 val passwordError = remember(newPassword, confirmNewPassword) {
                     when {
-                        newPassword.isNotEmpty() && newPassword.length < 6 -> "Пароль должен быть не менее 6 символов"
+                        newPassword.isNotEmpty() && newPassword.length < 6 -> getString(context,R.string.passwor_too_short,pref.getLanguage())
                         newPassword.isNotEmpty() && confirmNewPassword.isNotEmpty() &&
-                                newPassword != confirmNewPassword -> "Пароли не совпадают"
+                                newPassword != confirmNewPassword -> getString(context,R.string.password_do_not_match,pref.getLanguage())
                         else -> null
                     }
                 }
@@ -504,7 +498,7 @@ fun ProfileEditScreen(navController: NavController,
                 TextButton(
                     onClick = {
                         viewModel.sendPasswordResetEmail(currentEmail)
-                        successMessage="Письмо для сброса пароля отправлено на ваш email"
+                        successMessage=getString(context,R.string.change_password_email,pref.getLanguage())
                         showSuccessDialog = true
                     },
                     modifier = Modifier
@@ -516,7 +510,7 @@ fun ProfileEditScreen(navController: NavController,
 
                 ) {
                     Text(
-                        "Забыли пароль?",
+                        getString(context,R.string.forgot_password,pref.getLanguage()),
                         fontSize = 14.sp,
                     )
                 }
@@ -538,7 +532,7 @@ fun ProfileEditScreen(navController: NavController,
 
                                     (oldPassword.isBlank() && newPassword.isNotBlank()) ->
                                         snackbarHostState.showSnackbar(
-                                            message = "Введите текущий пароль",
+                                            message = getString(context,R.string.enter_current_password,pref.getLanguage()),
                                             duration = SnackbarDuration.Short
                                         )
 
@@ -557,7 +551,7 @@ fun ProfileEditScreen(navController: NavController,
                     ),
                     shape = RoundedCornerShape(20.dp)
                 ) {
-                    Text("Сменить пароль", fontSize = 15.sp, modifier = Modifier.padding(5.dp))
+                    Text(getString(context,R.string.change_password,pref.getLanguage()), fontSize = 15.sp, modifier = Modifier.padding(5.dp))
 
                 }
                 Button(
@@ -574,7 +568,7 @@ fun ProfileEditScreen(navController: NavController,
                     ),
                     shape = RoundedCornerShape(20.dp)
                 ) {
-                    Text("Очистить изображение профиля", fontSize = 15.sp, modifier = Modifier.padding(5.dp))
+                    Text(getString(context,R.string.clear_profile_image,pref.getLanguage()), fontSize = 15.sp, modifier = Modifier.padding(5.dp))
 
                 }
 
@@ -597,7 +591,7 @@ fun ProfileEditScreen(navController: NavController,
                             strokeWidth = 4.dp
                         )
                         Text(
-                            text = "Сохранение..."
+                            text = getString(context,R.string.save,pref.getLanguage())
                             ,
                             color = Color.White,
                             fontSize = 16.sp

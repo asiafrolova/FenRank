@@ -1,17 +1,11 @@
 package com.example.fencing_project.view.components
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemColors
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,7 +28,6 @@ sealed class BottomNavItem(
     object Profile : BottomNavItem("profile", R.string.profile, iconResId = R.drawable.profile_ic)
 }
 @SuppressLint("SuspiciousIndentation")
-@Preview
 @Composable
 fun BottomNavigationBar(navController: NavController = rememberNavController(),
                         containerColor:Color = Color(139,0,0)) {
@@ -67,12 +60,10 @@ fun BottomNavigationBar(navController: NavController = rememberNavController(),
                             tint = Color.White
                         )
                     },
-                    // label = { Text(stringResource(item.titleResId)) },
                     selected = currentRoute == item.route,
                     onClick = {
                         if (currentRoute != item.route) {
                             navController.navigate(item.route) {
-                                // Очистка back stack при нажатии на элемент навигации
                                 popUpTo(navController.graph.startDestinationId) {
                                     saveState = true
                                 }

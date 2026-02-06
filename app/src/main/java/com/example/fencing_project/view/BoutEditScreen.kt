@@ -17,7 +17,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -28,6 +30,7 @@ import coil.compose.AsyncImage
 import com.example.fencing_project.R
 import com.example.fencing_project.data.local.LocalBout
 import com.example.fencing_project.data.local.LocalOpponent
+import com.example.fencing_project.getString
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.viewmodel.BoutViewModel
@@ -39,52 +42,39 @@ import kotlinx.coroutines.delay
 @Composable
 fun BoutEditScreen(
     navController: NavController,
-
-
-
     pref: SharedPrefsManager,
     boutId: Long? = null,
     startOpponentId: Long? =0,
     boutViewModel: BoutViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val userId = pref.getUserId()
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    // Состояния формы
     var selectedOpponentId by remember { mutableStateOf(startOpponentId?: 0) }
     var userScore by remember { mutableStateOf("") }
     var opponentScore by remember { mutableStateOf("") }
     var comment by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf(System.currentTimeMillis()) }
-
     val opponentsState by homeViewModel.opponents.collectAsState()
     val boutState by boutViewModel.boutState.collectAsState()
     val saveBoutState by boutViewModel.saveBoutState.collectAsState()
     val deleteBoutState by boutViewModel.deleteBoutState.collectAsState()
-
-    // Состояния для диалогов
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var successMessage by remember { mutableStateOf("") }
-
-    // Флаг для предотвращения повторного показа диалога
     var hasShownSuccessDialog by remember { mutableStateOf(false) }
 
-    // Загружаем данные при открытии экрана
     LaunchedEffect(key1 = userId) {
         if (userId != null) {
             homeViewModel.loadUserData(userId)
-
-            // Если передан boutId, загружаем данные боя для редактирования
             if (boutId != null) {
                 boutViewModel.getBout(boutId)
             }
         }
     }
 
-    // Заполняем форму данными боя при загрузке
     LaunchedEffect(boutState) {
         if (boutState is UIState.Success && boutId != null) {
             val bout = (boutState as UIState.Success<LocalBout>).data
@@ -96,18 +86,19 @@ fun BoutEditScreen(
         }
     }
 
-    // Обработка состояния сохранения
     LaunchedEffect(saveBoutState) {
         when (saveBoutState) {
             is UIState.Success -> {
                 if (!hasShownSuccessDialog) {
-                    successMessage = if (boutId == null) "Бой успешно добавлен" else "Бой успешно обновлен"
+                    successMessage = if (boutId == null) getString(context,R.string.bout_add_successfull,pref.getLanguage()) else getString(
+                        context,
+                        R.string.bout_update_successfull,
+                        pref.getLanguage()
+                    )
                     showSuccessDialog = true
                     hasShownSuccessDialog = true
-
-                    // Сбрасываем состояние после показа диалога
                     coroutineScope.launch {
-                        delay(100) // Небольшая задержка
+                        delay(100)
                         boutViewModel.resetSaveState()
                     }
                 }
@@ -126,22 +117,22 @@ fun BoutEditScreen(
         }
     }
 
-    // Обработка состояния удаления
     LaunchedEffect(deleteBoutState) {
         when (deleteBoutState) {
             is UIState.Success -> {
                 showDeleteConfirmationDialog = false
-                // Сразу сбрасываем состояние
                 boutViewModel.resetDeleteState()
-
-                // Показываем диалог и сразу возвращаемся
-                successMessage = "Бой успешно удален"
+                successMessage = getString(context,R.string.delete_successfull,pref.getLanguage())
                 showSuccessDialog = true
             }
             is UIState.Error -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
-                        message = "Ошибка удаления: ${(deleteBoutState as UIState.Error).message}",
+                        message = getString(
+                            context,
+                            R.string.error_delete,
+                            pref.getLanguage()
+                        ),
                         actionLabel = "OK",
                         duration = SnackbarDuration.Short
                     )
@@ -152,7 +143,6 @@ fun BoutEditScreen(
         }
     }
 
-    // Диалог подтверждения удаления
     if (showDeleteConfirmationDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -162,13 +152,13 @@ fun BoutEditScreen(
             },
             title = {
                 Text(
-                    "Удалить бой?",
+                    getString(context,R.string.delete_bout_qs,pref.getLanguage()),
                     color = Color.White
                 )
             },
             text = {
                 Text(
-                    "Вы уверены, что хотите удалить этот бой? Это действие нельзя отменить.",
+                    getString(context,R.string.sure_delete_bout,pref.getLanguage()),
                     color = Color.White
                 )
             },
@@ -187,7 +177,7 @@ fun BoutEditScreen(
                         contentColor = Color.White
                     )
                 ) {
-                    Text("Удалить")
+                    Text(getString(context,R.string.delete_btn,pref.getLanguage()))
                 }
             },
             dismissButton = {
@@ -202,13 +192,12 @@ fun BoutEditScreen(
                         contentColor = Color.White
                     )
                 ) {
-                    Text("Отмена")
+                    Text(getString(context,R.string.cancel,pref.getLanguage()))
                 }
             }
         )
     }
 
-    // Диалог успешного действия
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -217,7 +206,7 @@ fun BoutEditScreen(
             },
             title = {
                 Text(
-                    "Успешно",
+                    getString(context,R.string.successfull,pref.getLanguage()),
                     color = Color.White
                 )
             },
@@ -245,16 +234,15 @@ fun BoutEditScreen(
         )
     }
 
-    // Расчет результата
     val resultText = remember(userScore, opponentScore) {
         val user = userScore.toIntOrNull() ?: 0
         val opponent = opponentScore.toIntOrNull() ?: 0
 
         when {
             user == 0 && opponent == 0 -> ""
-            user > opponent -> "Победа"
-            user < opponent -> "Поражение"
-            user == opponent -> "Ничья"
+            user > opponent -> getString(context,R.string.victory,pref.getLanguage())
+            user < opponent -> getString(context,R.string.defeat,pref.getLanguage())
+            user == opponent -> getString(context,R.string.draw,pref.getLanguage())
             else -> ""
         }
     }
@@ -272,11 +260,8 @@ fun BoutEditScreen(
         }
     }
 
-    // Заголовок экрана
-    val screenTitle = if (boutId == null) "Новый бой" else "Редактировать бой"
-    val buttonText = if (boutId == null) "Добавить бой" else "Сохранить изменения"
-
-    // Проверяем, идет ли загрузка
+    val screenTitle = if (boutId == null) getString(context,R.string.new_bout,pref.getLanguage()) else getString(context,R.string.change_bout, pref.getLanguage())
+    val buttonText = if (boutId == null) getString(context,R.string.add_bout,pref.getLanguage()) else getString(context,R.string.save_changes,pref.getLanguage())
     val isLoading = saveBoutState is UIState.Loading || deleteBoutState is UIState.Loading
 
     Scaffold(
@@ -322,8 +307,6 @@ fun BoutEditScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
-
-                // Получаем список соперников
                 val opponentList = remember(opponentsState) {
                     when (opponentsState) {
                         is UIState.Success -> (opponentsState as UIState.Success<List<LocalOpponent>>).data
@@ -331,7 +314,6 @@ fun BoutEditScreen(
                     }
                 }
 
-                // Выбор соперника
                 val selectedOpponent = opponentList.find { it.id == selectedOpponentId }
                 var expanded by remember { mutableStateOf(false) }
 
@@ -341,10 +323,10 @@ fun BoutEditScreen(
                     modifier = Modifier.padding(horizontal = 10.dp)
                 ) {
                     OutlinedTextField(
-                        value = selectedOpponent?.name ?: "Выберите соперника",
+                        value = selectedOpponent?.name ?: getString(context,R.string.choose_opponent,pref.getLanguage()),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Соперник") },
+                        label = { Text(getString(context,R.string.opponent,pref.getLanguage())) },
                         leadingIcon = {
                             AsyncImage(
                                 model = selectedOpponent?.avatarPath,
@@ -385,7 +367,7 @@ fun BoutEditScreen(
                     ) {
                         if (opponentList.isEmpty()) {
                             DropdownMenuItem(
-                                text = { Text("Нет соперников") },
+                                text = { Text(getString(context,R.string.no_opponents,pref.getLanguage())) },
                                 onClick = { expanded = false }
                             )
                         } else {
@@ -433,20 +415,19 @@ fun BoutEditScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth(),
-                            //.padding(horizontal = 10.dp),
+
                         enabled = !isLoading,
                         colors = ButtonDefaults.textButtonColors(
                             contentColor = Color.White
                         )
                     ) {
                         Text(
-                            text = "Подробнее о сопернике →",
+                            text = getString(context,R.string.more_about_the_opponent,pref.getLanguage()),
                             fontSize = 14.sp
                         )
                     }
                 }
 
-                // Отображение результата
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -463,7 +444,7 @@ fun BoutEditScreen(
                         )
                     } else {
                         Text(
-                            text = "Введите счёт",
+                            text = getString(context,R.string.enter_account,pref.getLanguage()),
                             color = Color(126, 126, 126, 255),
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -472,7 +453,6 @@ fun BoutEditScreen(
                     }
                 }
 
-                // Ввод счета
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -489,7 +469,7 @@ fun BoutEditScreen(
                                 userScore = filteredValue
                             }
                         },
-                        label = { Text("Ваши уколы", fontSize = 11.sp) },
+                        label = { Text(getString(context,R.string.your_injections,pref.getLanguage()), fontSize = 11.sp) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
@@ -520,7 +500,7 @@ fun BoutEditScreen(
                                 opponentScore = filteredValue
                             }
                         },
-                        label = { Text("Уколы соперника", fontSize = 11.sp) },
+                        label = { Text(getString(context,R.string.opponent_thrusts,pref.getLanguage()), fontSize = 11.sp) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
@@ -537,20 +517,19 @@ fun BoutEditScreen(
                         enabled = !isLoading
                     )
                 }
-
-                // Выбор даты
                 SimpleDatePickerButton(
                     selectedDate = selectedDate,
                     onDateSelected = { newSelectedDate ->
                         if (!isLoading) selectedDate = newSelectedDate
                     },
+                    context=context,
+                    pref=pref
                 )
 
-                // Поле комментария
                 OutlinedTextField(
                     value = comment,
                     onValueChange = { if (!isLoading) comment = it },
-                    label = { Text("Комментарий") },
+                    label = { Text(getString(context,R.string.comment,pref.getLanguage())) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
@@ -571,7 +550,6 @@ fun BoutEditScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Кнопка сохранения/добавления
                 Button(
                     onClick = {
                         if (!isLoading && selectedOpponentId!=0L &&
@@ -596,17 +574,17 @@ fun BoutEditScreen(
                                 when {
                                     selectedOpponentId==0L ->
                                         snackbarHostState.showSnackbar(
-                                            message = "Выберите соперника",
+                                            message = getString(context,R.string.choose_an_opponent,pref.getLanguage()),
                                             duration = SnackbarDuration.Short
                                         )
                                     userScore.isBlank() ->
                                         snackbarHostState.showSnackbar(
-                                            message = "Введите количество нанесенных уколов",
+                                            message = getString(context,R.string.enter_the_number_of_injections_administered,pref.getLanguage()),
                                             duration = SnackbarDuration.Short
                                         )
                                     opponentScore.isBlank() ->
                                         snackbarHostState.showSnackbar(
-                                            message = "Введите количество полученных уколов",
+                                            message = getString(context,R.string.enter_the_number_of_injections_received,pref.getLanguage()),
                                             duration = SnackbarDuration.Short
                                         )
                                 }
@@ -629,7 +607,6 @@ fun BoutEditScreen(
 
                 }
 
-                // Кнопка удаления (только при редактировании)
                 if (boutId != null) {
                     Button(
                         onClick = {
@@ -649,12 +626,12 @@ fun BoutEditScreen(
                         ),
                         shape = RoundedCornerShape(20.dp)
                     ) {
-                        Text("Удалить бой", fontSize = 15.sp, modifier = Modifier.padding(5.dp))
+                        Text(getString(context,R.string.delete_bout,pref.getLanguage()), fontSize = 15.sp, modifier = Modifier.padding(5.dp))
                     }
                 }
             }
 
-            // Полупрозрачный оверлей с индикатором загрузки
+
             if (isLoading) {
                 Box(
                     modifier = Modifier
@@ -672,7 +649,7 @@ fun BoutEditScreen(
                             strokeWidth = 4.dp
                         )
                         Text(
-                            text = if (deleteBoutState is UIState.Loading) "Удаление..." else "Сохранение...",
+                            text = if (deleteBoutState is UIState.Loading) getString(context,R.string.delete,pref.getLanguage()) else getString(context,R.string.save,pref.getLanguage()),
                             color = Color.White,
                             fontSize = 16.sp
                         )

@@ -1,5 +1,6 @@
 package com.example.fencing_project.view
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,10 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -36,6 +36,7 @@ import coil.compose.AsyncImage
 import com.example.fencing_project.R
 import com.example.fencing_project.data.local.LocalBout
 import com.example.fencing_project.data.local.LocalOpponent
+import com.example.fencing_project.getString
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.view.components.BottomNavigationBar
@@ -43,20 +44,16 @@ import com.example.fencing_project.viewmodel.HomeViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-// Добавьте в начало файла OpponentsScreen.kt
 data class Filters(
     val searchQuery: String = "",
-    val weaponHand: String? = null, // "Правая", "Левая"
-    val weaponType: String? = null, // "Рапира", "Сабля", "Шпага"
-    val selectedYear: Int? = null, // Только для боев
-    val selectedMonth: Int? = null, // Только для боев (1-12)
+    val weaponHand: String? = null,
+    val weaponType: String? = null,
+    val selectedYear: Int? = null,
+    val selectedMonth: Int? = null,
     val boutResult: String? = null
 )
 
-// Добавьте константы для оружия
-private val WEAPON_TYPES = listOf("Рапира", "Сабля", "Шпага")
-private val WEAPON_HANDS = listOf("Правая", "Левая")
-private val BOUT_RESULTS = listOf("Победа", "Поражение", "Ничья")
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +62,13 @@ fun OpponentsScreen(
     pref: SharedPrefsManager,
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val WEAPON_TYPES = listOf(getString(context,R.string.epee,pref.getLanguage()),
+        getString(context,R.string.foil,pref.getLanguage()), getString(context,R.string.sabre,pref.getLanguage()))
+    val WEAPON_HANDS = listOf(getString(context,R.string.right,pref.getLanguage()),
+            getString(context,R.string.left,pref.getLanguage()))
+    val BOUT_RESULTS = listOf(getString(context,R.string.victory,pref.getLanguage()),
+            getString(context,R.string.delete,pref.getLanguage()), getString(context,R.string.draw,pref.getLanguage()))
 
 
     val userId = pref.getUserId()
@@ -72,13 +76,10 @@ fun OpponentsScreen(
     var filters by remember {
         mutableStateOf(Filters())
     }
-    // Состояния для фильтрации
-    //var searchQuery by remember { mutableStateOf("") }
-    var selectedTab by remember { mutableStateOf(Tab.OPPONENTS) } // Начинаем с соперников
-    val focusManager = LocalFocusManager.current
-    var showFilters by remember { mutableStateOf(false) } // Для отображения фильтров
 
-    // Получаем данные из ViewModel
+    var selectedTab by remember { mutableStateOf(Tab.OPPONENTS) }
+    val focusManager = LocalFocusManager.current
+    var showFilters by remember { mutableStateOf(false) }
     val boutsState by homeViewModel.bouts.collectAsState()
     val opponentsState by homeViewModel.opponents.collectAsState()
 
@@ -87,7 +88,7 @@ fun OpponentsScreen(
             homeViewModel.loadUserData(userId)
         }
     }
-    // Список лет для фильтрации боев
+
     val availableYears = remember(boutsState) {
         when (boutsState) {
             is UIState.Success -> {
@@ -102,7 +103,7 @@ fun OpponentsScreen(
         }
     }
 
-    // Месяцы для выбранного года
+
     val availableMonths = remember(filters.selectedYear, boutsState) {
         if (filters.selectedYear == null) emptyList() else {
             when (boutsState) {
@@ -115,7 +116,7 @@ fun OpponentsScreen(
                     }.map { bout ->
                         val calendar = Calendar.getInstance()
                         calendar.timeInMillis = bout.date
-                        calendar.get(Calendar.MONTH) + 1 // Преобразуем к 1-12
+                        calendar.get(Calendar.MONTH) + 1
                     }.distinct().sorted()
                 }
                 else -> emptyList()
@@ -123,23 +124,19 @@ fun OpponentsScreen(
         }
     }
 
-    // Фильтруем данные
     val filteredOpponents = remember(opponentsState, filters) {
         when (opponentsState) {
             is UIState.Success -> {
                 val opponents = (opponentsState as UIState.Success<List<LocalOpponent>>).data
                 opponents.filter { opponent ->
-                    // Поиск по тексту
                     val matchesSearch = filters.searchQuery.isBlank() ||
                             opponent.name.contains(filters.searchQuery, ignoreCase = true) ||
                             opponent.comment?.contains(filters.searchQuery, ignoreCase = true) == true
 
-                    // Фильтр по руке
                     val matchesHand = filters.weaponHand?.let { hand ->
                         opponent.weaponHand.equals(hand, ignoreCase = true)
                     } ?: true
 
-                    // Фильтр по типу оружия
                     val matchesType = filters.weaponType?.let { type ->
                         opponent.weaponType.equals(type, ignoreCase = true)
                     } ?: true
@@ -163,13 +160,11 @@ fun OpponentsScreen(
                 bouts.filter { bout ->
                     val opponent = opponents.find { it.id == bout.opponentId }
 
-                    // Поиск по тексту
                     val matchesSearch = filters.searchQuery.isBlank() ||
                             bout.comment?.contains(filters.searchQuery, ignoreCase = true) == true ||
-                            bout.getResultText().contains(filters.searchQuery, ignoreCase = true) ||
+                            bout.getResultText(context,pref).contains(filters.searchQuery, ignoreCase = true) ||
                             opponent?.name?.contains(filters.searchQuery, ignoreCase = true) == true
-                    println("DEBUG Search = ${filters.searchQuery}")
-                    // Фильтр по дате
+
                     val calendar = Calendar.getInstance()
                     calendar.timeInMillis = bout.date
 
@@ -181,19 +176,16 @@ fun OpponentsScreen(
                         (calendar.get(Calendar.MONTH) + 1) == month
                     } ?: true
 
-                    // Фильтр по руке соперника
                     val matchesHand = filters.weaponHand?.let { hand ->
                         opponent?.weaponHand?.equals(hand, ignoreCase = true) == true
                     } ?: true
 
-                    // Фильтр по типу оружия соперника
                     val matchesType = filters.weaponType?.let { type ->
                         opponent?.weaponType?.equals(type, ignoreCase = true) == true
                     } ?: true
 
-                    // НОВЫЙ ФИЛЬТР: по результату боя
                     val matchesResult = filters.boutResult?.let { result ->
-                        bout.getResultText().equals(result, ignoreCase = true)
+                        bout.getResultText(context,pref).equals(result, ignoreCase = true)
                     } ?: true
 
                     matchesSearch && matchesYear && matchesMonth &&
@@ -204,61 +196,7 @@ fun OpponentsScreen(
         }
     }
 
-    // Фильтруем данные в зависимости от поискового запроса
-//    val filteredBouts = remember(boutsState, searchQuery) {
-//        when (boutsState) {
-//            is UIState.Success -> {
-//                val bouts = (boutsState as UIState.Success<List<Bout>>).data
-//                if (searchQuery.isBlank()) bouts
-//                else bouts.filter { bout ->
-//                    bout.comment?.contains(searchQuery, ignoreCase = true) == true ||
-//                            bout.getResultText().contains(searchQuery, ignoreCase = true)
-//                }
-//            }
-//            else -> emptyList()
-//        }
-//    }
-//    val filteredBouts = remember(boutsState, opponentsState, searchQuery) {
-//        when (boutsState) {
-//            is UIState.Success -> {
-//                val bouts = (boutsState as UIState.Success<List<Bout>>).data
-//                if (searchQuery.isBlank()) bouts else {
-//                    // Получаем список соперников для поиска по имени
-//                    val opponents = when (opponentsState) {
-//                        is UIState.Success -> (opponentsState as UIState.Success<List<Opponent>>).data
-//                        else -> emptyList()
-//                    }
-//
-//                    bouts.filter { bout ->
-//                        val opponent = opponents.find { it.id == bout.opponentId }
-//                        bout.comment?.contains(searchQuery, ignoreCase = true) == true ||
-//                                bout.getResultText().contains(searchQuery, ignoreCase = true) ||
-//                                // Добавляем поиск по имени соперника
-//                                opponent?.name?.contains(searchQuery, ignoreCase = true) == true
-//                    }
-//                }
-//            }
-//            else -> emptyList()
-//        }
-//    }
-//
-//    val filteredOpponents = remember(opponentsState, searchQuery) {
-//        when (opponentsState) {
-//            is UIState.Success -> {
-//                val opponents = (opponentsState as UIState.Success<List<Opponent>>).data
-//                if (searchQuery.isBlank()) opponents
-//                else opponents.filter { opponent ->
-//                    opponent.name.contains(searchQuery, ignoreCase = true) ||
-//                            opponent.comment?.contains(searchQuery, ignoreCase = true) == true ||
-//                            opponent.weaponType.contains(searchQuery, ignoreCase = true) ||
-//                            opponent.weaponHand.contains(searchQuery, ignoreCase = true)
-//                }
-//            }
-//            else -> emptyList()
-//        }
-//    }
 
-    // Компонент поиска
     @Composable
     fun SearchBar(
         query: String,
@@ -277,7 +215,7 @@ fun OpponentsScreen(
                 onValueChange = onQueryChange,
                 placeholder = {
                     Text(
-                        "Поиск...",
+                        getString(context,R.string.search,pref.getLanguage()),
                         color = Color(126, 126, 126, 255)
                     )
                 },
@@ -291,13 +229,13 @@ fun OpponentsScreen(
                 },
                 trailingIcon = {
                     Row {
-                        // Кнопка фильтров
+
                         Icon(
                             painter = painterResource(R.drawable.filter),
                             contentDescription = "Фильтры",
                             tint = if (filters.weaponHand != null || filters.weaponType != null ||
                                 filters.selectedYear != null || filters.selectedMonth != null ||
-                                filters.boutResult != null) // Добавьте это условие
+                                filters.boutResult != null)
                                 Color(139, 0, 0)
                             else
                                 Color.White,
@@ -312,7 +250,10 @@ fun OpponentsScreen(
                             painter = painterResource(R.drawable.close),
                             contentDescription = "Очистить",
                             tint = Color.White,
-                            modifier = Modifier.padding(end=56.dp).clickable { onClearQuery() }.size(15.dp)
+                            modifier = Modifier
+                                .padding(end = 56.dp)
+                                .clickable { onClearQuery() }
+                                .size(15.dp)
                         )
                     }
                 },
@@ -346,7 +287,7 @@ fun OpponentsScreen(
             Column(
                 modifier = Modifier.background(Color(25, 25, 33))
             ) {
-                // Поисковая строка
+
 
                 SearchBar(
                     query = filters.searchQuery,
@@ -356,16 +297,17 @@ fun OpponentsScreen(
                     onFiltersClick = { showFilters = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end=16.dp, top = 40.dp, bottom = 8.dp)
+                        .padding(start = 16.dp, end = 16.dp, top = 40.dp, bottom = 8.dp)
                 )
 
-                // Табы для переключения между боями и соперниками
                 TabBar(
                     selectedTab = selectedTab,
                     onTabSelected = { selectedTab = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    context,
+                    pref
                 )
             }
         },
@@ -394,7 +336,6 @@ fun OpponentsScreen(
         ) {
             when (selectedTab) {
                 Tab.OPPONENTS -> {
-                    // Отображаем список соперников
                     when (opponentsState) {
                         is UIState.Loading -> {
                             LoadingIndicator()
@@ -403,10 +344,12 @@ fun OpponentsScreen(
                             if (filteredOpponents.isEmpty()) {
                                 EmptyState(
                                     itsBout=false,
-                                    text = if (filters.searchQuery.isBlank()) // Используйте filters.searchQuery
-                                        "У вас пока нет соперников"
-                                    else "Соперники не найдены",
-                                    modifier = Modifier.padding(innerPadding)
+                                    text = if (filters.searchQuery.isBlank())
+                                        getString(context,R.string.you_no_opponents,pref.getLanguage())
+                                    else getString(context,R.string.search_no_opponents,pref.getLanguage()),
+                                    modifier = Modifier.padding(innerPadding),
+                                    context = context,
+                                    pref=pref
                                 )
                             } else {
                                 OpponentsList(
@@ -414,7 +357,9 @@ fun OpponentsScreen(
                                     onOpponentClick = { opponent ->
                                         navController.navigate("edit_opponent/${opponent.id}")
                                     },
-                                    modifier = Modifier.padding(innerPadding)
+                                    modifier = Modifier.padding(innerPadding),
+                                    context=context,
+                                    pref=pref
                                 )
                             }
                         }
@@ -422,16 +367,19 @@ fun OpponentsScreen(
                             ErrorState(
                                 message = (opponentsState as UIState.Error).message,
                                 onRetry = { userId?.let { homeViewModel.loadUserData(it) } },
-                                modifier = Modifier.padding(innerPadding)
+                                modifier = Modifier.padding(innerPadding),
+                                context=context,
+                                pref=pref
                             )
                         }
                         is UIState.Idle -> {
-                            // Ничего не показываем, ждем загрузки
+
                         }
+
                     }
                 }
                 Tab.BOUTS -> {
-                    // Отображаем список боев
+
                     when (boutsState) {
                         is UIState.Loading -> {
                             LoadingIndicator()
@@ -440,10 +388,12 @@ fun OpponentsScreen(
                             if (filteredBouts.isEmpty()) {
                                 EmptyState(
                                     itsBout=true,
-                                    text = if (filters.searchQuery.isBlank()) // Используйте filters.searchQuery
-                                        "У вас пока нет боев"
-                                    else "Бои не найдены",
-                                    modifier = Modifier.padding(innerPadding)
+                                    text = if (filters.searchQuery.isBlank())
+                                        getString(context,R.string.you_no_bouts,pref.getLanguage())
+                                    else getString(context,R.string.search_no_bouts,pref.getLanguage()),
+                                    modifier = Modifier.padding(innerPadding),
+                                    context=context,
+                                    pref=pref
                                 )
                             } else {
                                 BoutsList(
@@ -452,7 +402,9 @@ fun OpponentsScreen(
                                     onBoutClick = { bout ->
                                         navController.navigate("edit_bout/${bout.id}")
                                     },
-                                    modifier = Modifier.padding(innerPadding)
+                                    modifier = Modifier.padding(innerPadding),
+                                    context=context,
+                                    pref=pref,
                                 )
                             }
                         }
@@ -460,18 +412,20 @@ fun OpponentsScreen(
                             ErrorState(
                                 message = (boutsState as UIState.Error).message,
                                 onRetry = { userId?.let { homeViewModel.loadUserData(it) } },
-                                modifier = Modifier.padding(innerPadding)
+                                modifier = Modifier.padding(innerPadding),
+                                context=context,
+                                pref=pref
                             )
                         }
                         is UIState.Idle -> {
-                            // Ничего не показываем, ждем загрузки
+
                         }
                     }
                 }
             }
         }
     }
-    // Добавьте после Scaffold (перед закрывающей скобкой функции OpponentsScreen)
+
     if (showFilters) {
         ModalBottomSheet(
             onDismissRequest = { showFilters = false },
@@ -484,15 +438,14 @@ fun OpponentsScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Фильтры",
+                    text = getString(context,R.string.filters,pref.getLanguage()),
                     color = Color.White,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
 
-                // Фильтр по руке
                 FilterSection(
-                    title = "Рука",
+                    title = getString(context,R.string.hand,pref.getLanguage()),
                     items = WEAPON_HANDS,
                     selectedItem = filters.weaponHand,
                     onItemSelected = { hand ->
@@ -500,12 +453,13 @@ fun OpponentsScreen(
                     },
                     onClear = {
                         filters = filters.copy(weaponHand = null)
-                    }
+                    },
+                    context,
+                    pref
                 )
 
-                // Фильтр по типу оружия
                 FilterSection(
-                    title = "Оружие",
+                    title = getString(context,R.string.weapon,pref.getLanguage()),
                     items = WEAPON_TYPES,
                     selectedItem = filters.weaponType,
                     onItemSelected = { type ->
@@ -513,10 +467,12 @@ fun OpponentsScreen(
                     },
                     onClear = {
                         filters = filters.copy(weaponType = null)
-                    }
+                    },
+                    context,
+                    pref
                 )
                 FilterSection(
-                    title = "Результат",
+                    title = getString(context,R.string.result,pref.getLanguage()),
                     items = BOUT_RESULTS,
                     selectedItem = filters.boutResult,
                     onItemSelected = { result ->
@@ -524,10 +480,11 @@ fun OpponentsScreen(
                     },
                     onClear = {
                         filters = filters.copy(boutResult = null)
-                    }
+                    },
+                    context,
+                    pref
                 )
 
-                // Фильтры по дате (только для вкладки "Бои")
                 if (selectedTab == Tab.BOUTS) {
                     DateFilterSection(
                         selectedYear = filters.selectedYear,
@@ -542,19 +499,20 @@ fun OpponentsScreen(
                         },
                         onClearDate = {
                             filters = filters.copy(selectedYear = null, selectedMonth = null)
-                        }
+                        },
+                        context,
+                        pref
                     )
                 }
 
-                // Кнопки действий
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // В BottomSheet кнопка "Сбросить все"
+
                     Button(
                         onClick = {
-                            filters = Filters() // Сброс всех фильтров включая boutResult
+                            filters = Filters()
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
@@ -562,7 +520,7 @@ fun OpponentsScreen(
                             contentColor = Color.White
                         )
                     ) {
-                        Text("Сбросить все")
+                        Text(getString(context,R.string.reset_all,pref.getLanguage()))
                     }
 
                     Button(
@@ -573,7 +531,7 @@ fun OpponentsScreen(
                             contentColor = Color.White
                         )
                     ) {
-                        Text("Применить")
+                        Text(getString(context,R.string.apply,pref.getLanguage()))
                     }
                 }
             }
@@ -581,14 +539,13 @@ fun OpponentsScreen(
     }
 }
 
-
-
-// Компонент табов
 @Composable
 private fun TabBar(
     selectedTab: Tab,
     onTabSelected: (Tab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context,
+    pref: SharedPrefsManager
 ) {
     Row(
         modifier = modifier
@@ -597,7 +554,6 @@ private fun TabBar(
             .background(Color(25, 25, 33)),
         horizontalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        // Кнопка "Бои"
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -611,13 +567,12 @@ private fun TabBar(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Бои",
+                    text = getString(context,R.string.bouts,pref.getLanguage()),
                     color = Color.White,
                     fontSize = 16.sp,
                     fontWeight = if (selectedTab == Tab.BOUTS) FontWeight.Bold else FontWeight.Medium
                 )
 
-                // Подчеркивание для выбранной вкладки
                 if (selectedTab == Tab.BOUTS) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Box(
@@ -630,13 +585,18 @@ private fun TabBar(
             }
         }
 
-        // Кнопка "Соперники"
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
                 .clickable { onTabSelected(Tab.OPPONENTS) }
-                .background(if (selectedTab == Tab.OPPONENTS) Color(44, 44, 51) else Color(25, 25, 33))
+                .background(
+                    if (selectedTab == Tab.OPPONENTS) Color(44, 44, 51) else Color(
+                        25,
+                        25,
+                        33
+                    )
+                )
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -644,13 +604,13 @@ private fun TabBar(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Соперники",
+                    text = getString(context,R.string.opponents,pref.getLanguage()),
                     color = Color.White,
                     fontSize = 16.sp,
                     fontWeight = if (selectedTab == Tab.OPPONENTS) FontWeight.Bold else FontWeight.Medium
                 )
 
-                // Подчеркивание для выбранной вкладки
+
                 if (selectedTab == Tab.OPPONENTS) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Box(
@@ -666,13 +626,13 @@ private fun TabBar(
 
 }
 
-
-// Компонент списка соперников
 @Composable
 public fun OpponentsList(
     opponents: List<LocalOpponent>,
     onOpponentClick: (LocalOpponent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context,
+    pref: SharedPrefsManager
 ) {
     LazyColumn(
         modifier = modifier,
@@ -682,7 +642,9 @@ public fun OpponentsList(
         items(opponents, key = { it.id }) { opponent ->
             OpponentItem(
                 opponent = opponent,
-                onClick = { onOpponentClick(opponent) }
+                onClick = { onOpponentClick(opponent) },
+                context = context,
+                pref=pref
             )
         }
     }
@@ -692,7 +654,9 @@ public fun OpponentsList(
 public fun OpponentItem(
     opponent: LocalOpponent,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context:Context,
+    pref: SharedPrefsManager
 ) {
     Card(
         modifier = modifier
@@ -710,7 +674,6 @@ public fun OpponentItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Аватарка
             AsyncImage(
                 model = opponent.avatarPath,
                 contentDescription = "Аватар ${opponent.name}",
@@ -736,7 +699,7 @@ public fun OpponentItem(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = opponent.weaponType,
+                        text = if(opponent.weaponType=="epee"){getString(context,R.string.epee,pref.getLanguage())}else if(opponent.weaponType=="foil"){getString(context,R.string.foil,pref.getLanguage())}else{getString(context,R.string.sabre,pref.getLanguage())},
                         color = Color(200, 200, 200),
                         fontSize = 14.sp
                     )
@@ -747,7 +710,7 @@ public fun OpponentItem(
                     )
 
                     Text(
-                        text = opponent.weaponHand,
+                        text = if(opponent.weaponHand=="right"){getString(context,R.string.right,pref.getLanguage())}else{getString(context,R.string.left,pref.getLanguage())},
                         color = Color(200, 200, 200),
                         fontSize = 14.sp
                     )
@@ -763,24 +726,24 @@ public fun OpponentItem(
                     )
                 }
 
-                // Статистика
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.padding(top = 8.dp)
                 ) {
                     StatItem(
-                        label = "Бои",
+                        label = getString(context,R.string.bouts,pref.getLanguage()),
                         value = opponent.totalBouts.toString()
                     )
 
                     StatItem(
-                        label = "Победы",
+                        label = getString(context,R.string.victories,pref.getLanguage()),
                         value = opponent.userWins.toString(),
                         color = Color(0xFF4CAF50)
                     )
 
                     StatItem(
-                        label = "Поражения",
+                        label = getString(context,R.string.defeats,pref.getLanguage()),
                         value = opponent.opponentWins.toString(),
                         color = Color(0xFFF44336)
                     )
@@ -790,19 +753,21 @@ public fun OpponentItem(
     }
 }
 
-// Компонент списка боев
+
 @Composable
 public fun BoutsList(
     bouts: List<LocalBout>,
     opponents: List<LocalOpponent>,
     onBoutClick: (LocalBout) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context,
+    pref: SharedPrefsManager
 ) {
-    // Группируем бои по датам
+
     val groupedBouts = remember(bouts) {
         bouts.sortedByDescending { it.date }
             .groupBy { bout ->
-                SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(Date(bout.date))
+                SimpleDateFormat("dd MMMM yyyy", Locale(pref.getLanguage())).format(Date(bout.date))
             }
     }
 
@@ -812,7 +777,6 @@ public fun BoutsList(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         groupedBouts.forEach { (date, dateBouts) ->
-            // Заголовок с датой
             item {
                 Text(
                     text = date,
@@ -828,7 +792,9 @@ public fun BoutsList(
                 BoutItem(
                     bout = bout,
                     opponent = opponent,
-                    onClick = { onBoutClick(bout) }
+                    onClick = { onBoutClick(bout) },
+                    context=context,
+                    pref=pref
                 )
             }
         }
@@ -840,7 +806,9 @@ public fun BoutItem(
     bout: LocalBout,
     opponent: LocalOpponent?,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context,
+    pref: SharedPrefsManager
 ) {
     Card(
         modifier = modifier
@@ -857,7 +825,7 @@ public fun BoutItem(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Информация о сопернике
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -873,14 +841,13 @@ public fun BoutItem(
                 )
 
                 Text(
-                    text = opponent?.name ?: "Неизвестный соперник",
+                    text = opponent?.name ?: getString(context,R.string.unknown_opponent,pref.getLanguage()),
                     color = Color.White,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
 
-            // Счет
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -889,13 +856,12 @@ public fun BoutItem(
                 ScoreDisplay(
                     userScore = bout.userScore,
                     opponentScore = bout.opponentScore,
-                    resultText = bout.getResultText()
+                    resultText = bout.getResultText(context,pref)
                 )
 
 
             }
 
-            // Комментарий если есть
             bout.comment?.takeIf { it.isNotBlank() }?.let { comment ->
                 Text(
                     text = comment,
@@ -917,9 +883,9 @@ private fun ScoreDisplay(
 ) {
     val resultColor = remember(userScore, opponentScore) {
         when {
-            userScore > opponentScore -> Color(0xFF4CAF50) // Победа
-            userScore < opponentScore -> Color(0xFFF44336) // Поражение
-            else -> Color(0xFFFF9800) // Ничья
+            userScore > opponentScore -> Color(0xFF4CAF50)
+            userScore < opponentScore -> Color(0xFFF44336)
+            else -> Color(0xFFFF9800)
         }
     }
 
@@ -943,7 +909,7 @@ private fun ScoreDisplay(
     }
 }
 
-// Вспомогательные компоненты
+
 @Composable
 private fun StatItem(
     label: String,
@@ -984,7 +950,9 @@ private fun LoadingIndicator() {
 private fun EmptyState(
     itsBout: Boolean,
     text: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context,
+    pref: SharedPrefsManager
 ) {
     Column(
         modifier = modifier.fillMaxSize(),
@@ -993,7 +961,7 @@ private fun EmptyState(
     ) {
         Icon(
             painter = if (itsBout) {painterResource(R.drawable.bout)} else {painterResource(R.drawable.fencing_mask)},
-            contentDescription = "Пусто",
+            contentDescription = getString(context,R.string.empty,pref.getLanguage()),
             tint = Color(100, 100, 100),
             modifier = Modifier.size(100.dp)
         )
@@ -1012,7 +980,9 @@ private fun EmptyState(
 private fun ErrorState(
     message: String,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context,
+    pref: SharedPrefsManager
 ) {
     Column(
         modifier = modifier.fillMaxSize(),
@@ -1021,7 +991,7 @@ private fun ErrorState(
     ) {
         Icon(
             painter = painterResource(R.drawable.error),
-            contentDescription = "Ошибка",
+            contentDescription = getString(context,R.string.error_e,pref.getLanguage()),
             tint = Color(0xFFF44336),
             modifier = Modifier.size(100.dp)
         )
@@ -1045,21 +1015,21 @@ private fun ErrorState(
                 contentColor = Color.White
             )
         ) {
-            Text("Повторить")
+            Text(getString(context,R.string.retry,pref.getLanguage()))
         }
     }
 }
 
-// Расширение для Bout чтобы получить текст результата
-public fun LocalBout.getResultText(): String {
+
+public fun LocalBout.getResultText(context: Context,pref: SharedPrefsManager): String {
     return when {
-        userScore > opponentScore -> "Победа"
-        userScore < opponentScore -> "Поражение"
-        else -> "Ничья"
+        userScore > opponentScore -> getString(context,R.string.victory,pref.getLanguage())
+        userScore < opponentScore -> getString(context,R.string.defeat,pref.getLanguage())
+        else -> getString(context,R.string.draw,pref.getLanguage())
     }
 }
 
-// Enum для табов
+
 private enum class Tab {
     BOUTS, OPPONENTS
 }
@@ -1070,7 +1040,9 @@ private fun FilterSection(
     items: List<String>,
     selectedItem: String?,
     onItemSelected: (String) -> Unit,
-    onClear: () -> Unit
+    onClear: () -> Unit,
+    context: Context,
+    pref: SharedPrefsManager
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -1088,7 +1060,7 @@ private fun FilterSection(
             if (selectedItem != null) {
                 TextButton(onClick = onClear) {
                     Text(
-                        text = "Очистить",
+                        text = getString(context,R.string.clear,pref.getLanguage()),
                         color = Color.White,
                         fontSize = 12.sp
                     )
@@ -1132,7 +1104,9 @@ private fun DateFilterSection(
     availableMonths: List<Int>,
     onYearSelected: (Int) -> Unit,
     onMonthSelected: (Int) -> Unit,
-    onClearDate: () -> Unit
+    onClearDate: () -> Unit,
+    context: Context,
+    pref: SharedPrefsManager
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -1141,7 +1115,7 @@ private fun DateFilterSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Дата",
+                text = getString(context,R.string.date,pref.getLanguage()),
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
@@ -1150,7 +1124,7 @@ private fun DateFilterSection(
             if (selectedYear != null || selectedMonth != null) {
                 TextButton(onClick = onClearDate) {
                     Text(
-                        text = "Очистить",
+                        text = getString(context,R.string.clear,pref.getLanguage()),
                         color = Color.White,
                         fontSize = 12.sp
                     )
@@ -1158,9 +1132,8 @@ private fun DateFilterSection(
             }
         }
 
-        // Выбор года
         Text(
-            text = "Год",
+            text = getString(context,R.string.year,pref.getLanguage()),
             color = Color(200, 200, 200),
             fontSize = 14.sp
         )
@@ -1170,13 +1143,13 @@ private fun DateFilterSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Кнопка "Все года"
+
                 FilterChip(
                     selected = selectedYear == null,
                     onClick = { onYearSelected(availableYears.first()) },
                     label = {
                         Text(
-                            text = "Все года",
+                            text = getString(context,R.string.all_years,pref.getLanguage()),
                             color = if (selectedYear == null) Color.White else Color(200, 200, 200)
                         )
                     },
@@ -1213,17 +1186,17 @@ private fun DateFilterSection(
             }
         } else {
             Text(
-                text = "Нет данных",
+                text = getString(context,R.string.no_data,pref.getLanguage()),
                 color = Color(150, 150, 150),
                 fontSize = 14.sp
             )
         }
 
-        // Выбор месяца (только если выбран год)
+
         if (selectedYear != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Месяц",
+                text = getString(context,R.string.month,pref.getLanguage()),
                 color = Color(200, 200, 200),
                 fontSize = 14.sp
             )
@@ -1232,13 +1205,13 @@ private fun DateFilterSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Кнопка "Все месяцы"
+
                 FilterChip(
                     selected = selectedMonth == null,
                     onClick = { onMonthSelected(0) },
                     label = {
                         Text(
-                            text = "Все месяцы",
+                            text = getString(context,R.string.all_months,pref.getLanguage()),
                             color = if (selectedMonth == null) Color.White else Color(200, 200, 200)
                         )
                     },
@@ -1254,19 +1227,19 @@ private fun DateFilterSection(
 
                 availableMonths.forEach { month ->
                     val monthName = when (month) {
-                        1 -> "Январь"
-                        2 -> "Февраль"
-                        3 -> "Март"
-                        4 -> "Апрель"
-                        5 -> "Май"
-                        6 -> "Июнь"
-                        7 -> "Июль"
-                        8 -> "Август"
-                        9 -> "Сентябрь"
-                        10 -> "Октябрь"
-                        11 -> "Ноябрь"
-                        12 -> "Декабрь"
-                        else -> "Месяц $month"
+                        1 -> getString(context,R.string.january,pref.getLanguage())
+                        2 -> getString(context,R.string.february,pref.getLanguage())
+                        3 -> getString(context,R.string.march,pref.getLanguage())
+                        4 -> getString(context,R.string.april,pref.getLanguage())
+                        5 -> getString(context,R.string.may,pref.getLanguage())
+                        6 -> getString(context,R.string.june,pref.getLanguage())
+                        7 -> getString(context,R.string.july,pref.getLanguage())
+                        8 -> getString(context,R.string.august,pref.getLanguage())
+                        9 -> getString(context,R.string.september,pref.getLanguage())
+                        10 ->getString(context,R.string.october,pref.getLanguage())
+                        11 -> getString(context,R.string.november,pref.getLanguage())
+                        12 -> getString(context,R.string.december,pref.getLanguage())
+                        else -> getString(context,R.string.month,pref.getLanguage())
                     }
 
                     FilterChip(

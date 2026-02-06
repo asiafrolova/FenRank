@@ -17,11 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -31,7 +29,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,27 +40,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.fencing_project.MainActivity
 import com.example.fencing_project.R
 import com.example.fencing_project.Routes
+import com.example.fencing_project.getString
 import com.example.fencing_project.utils.SharedPrefsManager
-import com.example.fencing_project.view.components.RestoreDataDialog
 import com.example.fencing_project.viewmodel.LoginUiState
 import com.example.fencing_project.viewmodel.LoginViewModel
 import com.example.fencing_project.viewmodel.ProfileViewModel
-import com.example.fencing_project.viewmodel.RegisterUiState
 import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -81,18 +73,16 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
     var showPassword by remember { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
-
+    val context = LocalContext.current
 
 
     LaunchedEffect(uiState) {
         when (uiState) {
             is LoginUiState.Success -> {
                 val successState = uiState as LoginUiState.Success
-                // Сохраняем данные пользователя
                 pref.saveLoginState(
                     userId = successState.userId
                 )
-                println("DEBUG: Сохранен userId: ${successState.userId}")
                 navController.navigate(Routes.Home.route) {
                     popUpTo(Routes.Login.route) { inclusive = true }
                 }
@@ -101,9 +91,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
             }
             is LoginUiState.Offline -> {
 
-                // Сохраняем данные пользователя
                 pref.saveLocalLogin()
-                println("DEBUG: Пользователь вошел оффлайн")
                 navController.navigate(Routes.Home.route) {
                     popUpTo(Routes.Login.route) { inclusive = true }
                 }
@@ -126,13 +114,13 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
             },
             title = {
                 Text(
-                    "Успешно",
+                    getString(context,R.string.successfull,pref.getLanguage()),
                     color = Color.White
                 )
             },
             text = {
                 Text(
-                    "На указанную почту отправлено письмо для сброса пароля",
+                    getString(context,R.string.change_password_email,pref.getLanguage()),
                     color = Color.White
                 )
             },
@@ -170,7 +158,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center) {
                 Text(
-                    stringResource(R.string.sign_in),
+                    getString(context,R.string.sign_in,pref.getLanguage()),
                     modifier.padding(
                         vertical = 80.dp,
                         horizontal = 10.dp),
@@ -193,7 +181,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
                         color = Color.White),
                     placeholder = {
                         Text(
-                            stringResource(R.string.email),
+                            getString(context,R.string.email,pref.getLanguage()),
                             color = Color.White) },
                     shape = RoundedCornerShape(50.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -234,7 +222,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
                         color = Color.White),
                     placeholder = {
                         Text(
-                            stringResource(R.string.password),
+                            getString(context,R.string.password,pref.getLanguage()),
                             color = Color.White)},
                     shape = RoundedCornerShape(50.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -271,7 +259,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
                         )
                     } else {
                         Text(
-                            stringResource(R.string.login),
+                            getString(context,R.string.login,pref.getLanguage()),
                             color = Color.White,
                             fontSize = 17.sp)
                     }
@@ -283,7 +271,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
                         if(email.isBlank()){
                             coroutineScope.launch {
                                 snackbarHostState.showSnackbar(
-                                    message = "Введите почту",
+                                    message = getString(context,R.string.enter_email,pref.getLanguage()),
                                     duration = SnackbarDuration.Short
                                 )
                             }
@@ -300,13 +288,13 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
 
                 ) {
                     Text(
-                        "Забыли пароль?",
+                        getString(context,R.string.forgot_password,pref.getLanguage()),
                         fontSize = 14.sp,
                     )
                 }}
                 Column(modifier = Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        "Войти гостем",
+                        getString(context,R.string.sign_in_guest,pref.getLanguage()),
                         modifier = Modifier
                             .padding(top = 10.dp, bottom = 10.dp)
 
@@ -317,7 +305,7 @@ fun LoginScreen(modifier: Modifier = Modifier, navController: NavController, vie
                         fontSize = 15.sp
                     )
                     Text(
-                        stringResource(R.string.no_account_registr),
+                        getString(context,R.string.no_account_registr,pref.getLanguage()),
                         modifier = Modifier
                             .padding(top = 10.dp, bottom = 10.dp)
 

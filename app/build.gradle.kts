@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +9,16 @@ plugins {
     kotlin("kapt")
     alias(libs.plugins.google.services)
 }
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+
+val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: ""
+val supabaseKey = localProperties.getProperty("SUPABASE_KEY") ?: ""
+
 
 android {
     namespace = "com.example.fencing_project"
@@ -23,7 +36,12 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
     }
+
 
 
     buildTypes {
@@ -45,6 +63,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig=true
         compose = true
     }
     composeOptions {
@@ -63,6 +82,7 @@ android {
 
 dependencies {
 
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -72,6 +92,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.room.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -146,6 +167,8 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("androidx.documentfile:documentfile:1.0.1")
 
+    implementation("androidx.appcompat:appcompat:1.6.1")
+
     dependencies {
         val room_version = "2.8.4"
 
@@ -178,6 +201,26 @@ dependencies {
         implementation("androidx.room:room-paging:$room_version")
 
         implementation("androidx.core:core-splashscreen:1.2.0")
+
+        val work_version = "2.11.1"
+
+        // (Java only)
+        implementation("androidx.work:work-runtime:$work_version")
+
+        // Kotlin + coroutines
+        implementation("androidx.work:work-runtime-ktx:$work_version")
+
+        // optional - RxJava2 support
+        implementation("androidx.work:work-rxjava2:$work_version")
+
+        // optional - GCMNetworkManager support
+        implementation("androidx.work:work-gcm:$work_version")
+
+        // optional - Test helpers
+        androidTestImplementation("androidx.work:work-testing:$work_version")
+
+        // optional - Multiprocess support
+        implementation("androidx.work:work-multiprocess:$work_version")
     }
 
 

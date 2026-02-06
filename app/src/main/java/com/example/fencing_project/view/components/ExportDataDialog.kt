@@ -1,5 +1,6 @@
 package com.example.fencing_project.view.components
 
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,19 +20,24 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.fencing_project.R
+import com.example.fencing_project.getString
+import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.viewmodel.ExportViewModel
-import org.apache.poi.ss.formula.functions.Column
 
-// ExportScreen.kt или диалог в SettingsScreen
+
 @Composable
 fun ExportDataDialog(
     onDismiss: () -> Unit,
     viewModel: ExportViewModel = hiltViewModel<ExportViewModel>(),
-    userId: String
+    userId: String,
+    context: Context,
+    pref: SharedPrefsManager
 ) {
     val exportState by viewModel.exportState.collectAsState()
 
@@ -43,21 +49,21 @@ fun ExportDataDialog(
             }
         },
         title = {
-            Text("Экспорт данных", color = Color.White)
+            Text(getString(context,R.string.export_data,pref.getLanguage()), color = Color.White)
         },
         text = {
             Column {
                 Text(
-                    "Все данные будут экспортированы в файл Excel с двумя листами:",
+                    getString(context,R.string.all_data_export_excel_two_list,pref.getLanguage()),
                     color = Color.White,
                     fontSize = 14.sp
                 )
                 Text(
-                    "• Соперники - полная информация о соперниках",
+                    getString(context,R.string.opponents_list_excel,pref.getLanguage()),
                     color = Color.White, fontSize = 12.sp
                 )
                 Text(
-                    "• Бои - все бои с результатами",
+                    getString(context,R.string.bouts_list_excel,pref.getLanguage()),
                     color = Color.White, fontSize = 12.sp
                 )
 
@@ -75,13 +81,13 @@ fun ExportDataDialog(
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Создание файла...", color = Color.White)
+                            Text(getString(context,R.string.create_file_proccess,pref.getLanguage()), color = Color.White)
                         }
                     }
 
                     is UIState.Success -> {
                         Text(
-                            "✅ Файл успешно создан и сохранен в папке Загрузки",
+                            getString(context,R.string.file_create_successfull,pref.getLanguage()),
                             color = Color(0xFF4CAF50),
                             fontSize = 14.sp
                         )
@@ -89,7 +95,7 @@ fun ExportDataDialog(
 
                     is UIState.Error -> {
                         Text(
-                            "❌ ${(exportState as UIState.Error).message}",
+                            "${(exportState as UIState.Error).message}",
                             color = Color(0xFFF44336),
                             fontSize = 14.sp
                         )
@@ -115,8 +121,8 @@ fun ExportDataDialog(
             ) {
                 Text(
                     when (exportState) {
-                        is UIState.Success -> "Готово"
-                        else -> "Экспортировать"
+                        is UIState.Success -> getString(context,R.string.ready,pref.getLanguage())
+                        else -> getString(context,R.string.export,pref.getLanguage())
                     }
                 )
             }
@@ -131,7 +137,7 @@ fun ExportDataDialog(
                 },
                 enabled = exportState !is UIState.Loading
             ) {
-                Text("Отмена", color = Color.White)
+                Text(getString(context,R.string.cancel,pref.getLanguage()), color = Color.White)
             }
         }
     )

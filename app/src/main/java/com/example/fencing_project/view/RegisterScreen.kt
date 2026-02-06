@@ -34,8 +34,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -45,6 +45,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.fencing_project.R
 import com.example.fencing_project.Routes
+import com.example.fencing_project.getString
+import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.viewmodel.RegisterUiState
 import com.example.fencing_project.viewmodel.RegisterViewModel
 import kotlinx.coroutines.launch
@@ -53,7 +55,8 @@ import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "ViewModelConstructorInComposable")
 @Composable
-fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController, viewModel: RegisterViewModel = hiltViewModel()){
+fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController, viewModel: RegisterViewModel = hiltViewModel(),
+                   pref: SharedPrefsManager){
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val registerState by viewModel.uiState.collectAsState()
@@ -61,12 +64,12 @@ fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController, 
     val email = remember { mutableStateOf("") }
     val password = remember { mutableStateOf("") }
     val retryPassword = remember { mutableStateOf("") }
-
-    // Реакция на состояние регистрации
+    val context = LocalContext.current
     LaunchedEffect(registerState) {
         when (registerState) {
             is RegisterUiState.Success -> {
-                scope.launch { snackbarHostState.showSnackbar("Регистрация успешна!") }
+                scope.launch { snackbarHostState.showSnackbar(getString(context,R.string.register_successfull,pref.getLanguage())) }
+                pref.setRegistr(true)
                 navController.navigate(Routes.Login.route)
             }
             is RegisterUiState.Error -> {
@@ -80,7 +83,9 @@ fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController, 
 
 
     Scaffold (snackbarHost = { SnackbarHost(snackbarHostState) }) {
-        Box(modifier = Modifier.fillMaxSize().background(color = Color.Black)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .background(color = Color.Black)) {
 
             Image(
                 modifier = Modifier.fillMaxSize(),
@@ -94,7 +99,7 @@ fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController, 
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center) {
                 Text(
-                    stringResource(R.string.register_in),
+                    getString(context,R.string.register_in,pref.getLanguage()),
                     modifier.padding(
                         vertical = 80.dp,
                         horizontal = 10.dp),
@@ -117,7 +122,7 @@ fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController, 
                         color = Color.White),
                     placeholder = {
                         Text(
-                            stringResource(R.string.email),
+                            getString(context,R.string.email,pref.getLanguage()),
                             color = Color.White) },
                     shape = RoundedCornerShape(50.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -158,7 +163,7 @@ fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController, 
                         color = Color.White),
                     placeholder = {
                         Text(
-                            stringResource(R.string.password),
+                            getString(context,R.string.password,pref.getLanguage()),
                             color = Color.White)},
                     shape = RoundedCornerShape(50.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -200,7 +205,7 @@ fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController, 
                         color = Color.White),
                     placeholder = {
                         Text(
-                            stringResource(R.string.retry_password),
+                            getString(context,R.string.retry_password,pref.getLanguage()),
                             color = Color.White)},
                     shape = RoundedCornerShape(50.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -243,7 +248,7 @@ fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController, 
                         )
                     } else {
                         Text(
-                            stringResource(R.string.register),
+                            getString(context,R.string.register,pref.getLanguage()),
                             color = Color.White,
                             fontSize = 17.sp
                         )
@@ -252,12 +257,12 @@ fun RegisterScreen(modifier: Modifier = Modifier, navController: NavController, 
 
                 }
                 Text(
-                    stringResource(R.string.login_if_account),
+                    getString(context,R.string.login_if_account,pref.getLanguage()),
                     modifier = Modifier
                         .padding(top = 10.dp)
                         .clickable {
                             navController.navigate(Routes.Login.route)
-                    },
+                        },
                     color = Color.White,
                     fontSize = 15.sp)
 

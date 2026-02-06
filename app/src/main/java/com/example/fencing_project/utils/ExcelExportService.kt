@@ -1,9 +1,7 @@
-// ExcelExportService.kt
 package com.example.fencing_project.utils
 
 import android.content.ContentValues
 import android.content.Context
-import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -27,8 +25,6 @@ class ExcelExportService @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
 
-
-    // ExcelExportService.kt
     suspend fun exportToExcel(
         opponents: List<LocalOpponent>,
         bouts: List<LocalBout>,
@@ -36,26 +32,15 @@ class ExcelExportService @Inject constructor(
     ): String? {
         return withContext(Dispatchers.IO) {
             try {
-                // Создаем новую книгу Excel
                 val workbook = XSSFWorkbook()
-
-                // Создаем стили
                 val headerStyle = createHeaderStyle(workbook)
                 val dateStyle = createDateStyle(workbook)
-
-                // 1. Лист "Соперники"
                 createOpponentsSheet(workbook, opponents, headerStyle)
-
-                // 2. Лист "Бои"
                 createBoutsSheet(workbook, bouts, headerStyle, dateStyle)
-
-                // Сохраняем файл
                 val fileUri = saveWorkbook(workbook, fileName)
-
-                // Закрываем книгу
                 workbook.close()
 
-                fileUri // возвращаем строку URI
+                fileUri
             } catch (e: Exception) {
                 e.printStackTrace()
                 null
@@ -70,7 +55,7 @@ class ExcelExportService @Inject constructor(
     ) {
         val sheet = workbook.createSheet("Соперники")
 
-        // Создаем заголовки
+
         val headerRow = sheet.createRow(0)
         val headers = listOf(
             "ID", "Имя", "Дата создания", "Ведущая рука", "Тип оружия",
@@ -86,7 +71,7 @@ class ExcelExportService @Inject constructor(
 
         }
 
-        // Заполняем данными
+
         opponents.forEachIndexed { rowIndex, opponent ->
             val row = sheet.createRow(rowIndex + 1)
 
@@ -96,7 +81,6 @@ class ExcelExportService @Inject constructor(
             row.createCell(3).setCellValue(opponent.weaponHand)
             row.createCell(4).setCellValue(opponent.weaponType)
             row.createCell(5).setCellValue(opponent.comment ?: "")
-            //row.createCell(6).setCellValue(opponent.avatarPath ?: "")
             row.createCell(7-1).setCellValue(opponent.createdBy)
             row.createCell(8-1).setCellValue(opponent.totalBouts.toDouble())
             row.createCell(9-1).setCellValue(opponent.userWins.toDouble())
@@ -107,10 +91,7 @@ class ExcelExportService @Inject constructor(
             row.createCell(14-1).setCellValue(formatDate(opponent.lastBoutDate))
         }
 
-        // Авторазмер колонок
-//        for (i in 0 until headers.size) {
-//            sheet.autoSizeColumn(i)
-//        }
+
     }
 
     private fun createBoutsSheet(
@@ -121,7 +102,6 @@ class ExcelExportService @Inject constructor(
     ) {
         val sheet = workbook.createSheet("Бои")
 
-        // Создаем заголовки
         val headerRow = sheet.createRow(0)
         val headers = listOf(
             "ID", "ID соперника", "ID автора", "Уколы пользователя",
@@ -132,10 +112,8 @@ class ExcelExportService @Inject constructor(
             val cell = headerRow.createCell(index)
             cell.setCellValue(header)
             cell.cellStyle = headerStyle
-            //sheet.autoSizeColumn(index)
         }
 
-        // Заполняем данными
         bouts.forEachIndexed { rowIndex, bout ->
             val row = sheet.createRow(rowIndex + 1)
 
@@ -144,8 +122,6 @@ class ExcelExportService @Inject constructor(
             row.createCell(2).setCellValue(bout.authorId)
             row.createCell(3).setCellValue(bout.userScore.toDouble())
             row.createCell(4).setCellValue(bout.opponentScore.toDouble())
-
-            // Ячейка с датой
             val dateCell = row.createCell(5)
             dateCell.setCellValue(Date(bout.date))
             dateCell.cellStyle = dateStyle
@@ -160,10 +136,6 @@ class ExcelExportService @Inject constructor(
             )
         }
 
-        // Авторазмер колонок
-        for (i in 0 until headers.size) {
-            //sheet.autoSizeColumn(i)
-        }
     }
 
     private fun createHeaderStyle(workbook: Workbook): CellStyle {
@@ -173,18 +145,12 @@ class ExcelExportService @Inject constructor(
         font.bold = true
         font.fontHeightInPoints = 12
         style.setFont(font)
-
-        // Границы
         style.borderBottom = BorderStyle.THIN
         style.borderTop = BorderStyle.THIN
         style.borderLeft = BorderStyle.THIN
         style.borderRight = BorderStyle.THIN
-
-        // Заливка
         style.fillForegroundColor = IndexedColors.GREY_25_PERCENT.index
         style.fillPattern = FillPatternType.SOLID_FOREGROUND
-
-        // Выравнивание
         style.alignment = HorizontalAlignment.CENTER
         style.verticalAlignment = VerticalAlignment.CENTER
 
@@ -194,8 +160,6 @@ class ExcelExportService @Inject constructor(
     private fun createDateStyle(workbook: Workbook): CellStyle {
         val style = workbook.createCellStyle()
         val format = workbook.createDataFormat()
-
-            //style.dataFormat = format.getFormat("dd.MM.yyyy HH:mm")
         style.dataFormat = format.getFormat("dd.MM.yyyy")
 
         return style
@@ -215,10 +179,8 @@ class ExcelExportService @Inject constructor(
 
     private fun saveWorkbook(workbook: Workbook, fileName: String): String {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Для Android 10+ используем MediaStore
             saveToMediaStore(workbook, fileName)
         } else {
-            // Для старых версий - во внешнее хранилище
             saveToExternalStorage(workbook, fileName)
         }
     }
@@ -233,10 +195,8 @@ class ExcelExportService @Inject constructor(
         }
 
         val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Android 10+
             resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
         } else {
-            // Android 9 и ниже
             resolver.insert(
                 MediaStore.Files.getContentUri("external"),
                 contentValues

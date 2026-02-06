@@ -1,6 +1,5 @@
 package com.example.fencing_project.data.model
 
-import java.util.Date
 import java.util.UUID
 
 data class Bout(

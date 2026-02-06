@@ -1,21 +1,18 @@
 package com.example.fencing_project.view
 
+import android.content.Context
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,6 +22,7 @@ import androidx.navigation.NavController
 import com.example.fencing_project.R
 import com.example.fencing_project.data.local.LocalBout
 import com.example.fencing_project.data.local.LocalOpponent
+import com.example.fencing_project.getString
 import com.example.fencing_project.utils.SharedPrefsManager
 
 
@@ -43,51 +41,47 @@ fun HomeScreen(
     pref: SharedPrefsManager,
 
 ) {
-    var showRestoreDialog by remember { mutableStateOf(!pref.isOffline()) }
-
+    var showRestoreDialog by remember { mutableStateOf(!pref.isOffline()&&pref.isFirst()&&!pref.isRegistr()) }
+    pref.setRegistr(false)
 
     val userId: String? = pref.getUserId()
     LaunchedEffect(key1 = userId) {
         if (userId != null && userId.isNotBlank()) {
-            println("DEBUG: Загружаем данные для userId: $userId")
             viewModel.loadUserData(userId)
-        } else {
-            println("DEBUG: userId is null or blank")
         }
     }
 
     val boutsState by viewModel.bouts.collectAsState()
     val opponentsState by viewModel.opponents.collectAsState()
 
-    // Вычисляем топ-3 популярных соперников
     val topOpponents = remember(opponentsState) {
         when (opponentsState) {
             is UIState.Success -> {
                 val opponents = (opponentsState as UIState.Success<List<LocalOpponent>>).data
-                // Сортируем по количеству боев (totalBouts)
                 opponents.sortedByDescending { it.totalBouts }
-                    .take(3) // Берем топ-3
+                    .take(3)
             }
             else -> emptyList()
         }
     }
 
-    // Берем последние 5 боев
     val latestBouts = remember(boutsState) {
         when (boutsState) {
             is UIState.Success -> {
                 val bouts = (boutsState as UIState.Success<List<LocalBout>>).data
-                // Сортируем по дате (новые сверху) и берем первые 5
                 bouts.sortedByDescending { it.date }
                     .take(5)
             }
             else -> emptyList()
         }
     }
+    val context = LocalContext.current
 
     if (showRestoreDialog) {
         RestoreDataDialog(
-            onDismiss = { showRestoreDialog = false }
+            onDismiss = { showRestoreDialog = false },
+            context=context,
+            pref=pref
         )
     }
 
@@ -100,7 +94,7 @@ fun HomeScreen(
             ) {
                 Icon(
                     painterResource(R.drawable.add_bout_ic),
-                    contentDescription = stringResource(R.string.add_bout),
+                    contentDescription = getString(context,R.string.add_bout,pref.getLanguage()),
                     tint = Color.White,
                     modifier = Modifier.size(20.dp, 20.dp)
                 )
@@ -117,17 +111,15 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                text = "Добро пожаловать в Engarde!",
+                text = getString(context,R.string.welcome,pref.getLanguage()),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 modifier = Modifier.padding(vertical = 16.dp)
             )
 
-
-            // Секция: Самые популярные соперники
             Text(
-                text = "Популярные соперники",
+                text = getString(context,R.string.popular_opponents,pref.getLanguage()),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
@@ -149,17 +141,20 @@ fun HomeScreen(
                 is UIState.Success -> {
                     if (topOpponents.isEmpty()) {
                         EmptyStateOpponents(
-                            text = "У вас пока нет соперников",
-                            modifier = Modifier.padding(vertical = 16.dp)
+                            text = getString(context,R.string.you_no_opponents,pref.getLanguage()),
+                            modifier = Modifier.padding(vertical = 16.dp),
+                            context,
+                            pref
                         )
                     } else {
                         OpponentsListHome(
                             opponents = topOpponents,
-                            onOpponentClick = {
-                                opponent ->
-                                println("DEBUG: opponentId in Home = ${opponent.id}")
+                            onOpponentClick = { opponent ->
                                 navController.navigate("edit_opponent/${opponent.id}")
-                            }
+
+                            },
+                            context=context,
+                            pref =pref,
                         )
 
 
@@ -170,23 +165,25 @@ fun HomeScreen(
                     ErrorStateOpponents(
                         message = (opponentsState as UIState.Error).message,
                         onRetry = { userId?.let { viewModel.loadUserData(it) } },
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        context,
+                        pref
                     )
                 }
 
                 is UIState.Idle -> {
                     EmptyStateOpponents(
-                        text = "Начните добавлять соперников",
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        text = getString(context,R.string.start_add_opponents,pref.getLanguage()),
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        context,
+                        pref
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Секция: Последние бои
             Text(
-                text = "Последние бои",
+                text = getString(context,R.string.last_bouts,pref.getLanguage()),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
@@ -208,11 +205,12 @@ fun HomeScreen(
                 is UIState.Success -> {
                     if (latestBouts.isEmpty()) {
                         EmptyStateBouts(
-                            text = "У вас пока нет боев",
-                            modifier = Modifier.padding(vertical = 16.dp)
+                            text = getString(context,R.string.you_no_bouts,pref.getLanguage()),
+                            modifier = Modifier.padding(vertical = 16.dp),
+                            context,
+                            pref
                         )
                     } else {
-                        // Получаем список соперников
                         val opponentsMap = when (opponentsState) {
                             is UIState.Success -> {
                                 val opponentsList = (opponentsState as UIState.Success<List<LocalOpponent>>).data
@@ -226,7 +224,9 @@ fun HomeScreen(
                             opponents = (opponentsState as? UIState.Success<List<LocalOpponent>>)?.data ?: emptyList(),
                             onBoutClick = { bout ->
                                 navController.navigate("edit_bout/${bout.id}")
-                            }
+                            },
+                            context=context,
+                            pref=pref,
                         )
 
                     }
@@ -236,14 +236,18 @@ fun HomeScreen(
                     ErrorStateBouts(
                         message = (boutsState as UIState.Error).message,
                         onRetry = { userId?.let { viewModel.loadUserData(it) } },
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        context,
+                        pref
                     )
                 }
 
                 is UIState.Idle -> {
                     EmptyStateBouts(
-                        text = "Начните добавлять бои",
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        text = getString(context,R.string.start_add_bouts,pref.getLanguage()),
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        context,
+                        pref
                     )
                 }
             }
@@ -251,12 +255,13 @@ fun HomeScreen(
     }
 }
 
-// Список соперников для домашнего экрана (без изменений из OpponentsScreen)
 @Composable
 private fun OpponentsListHome(
     opponents: List<LocalOpponent>,
     onOpponentClick: (LocalOpponent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context,
+    pref: SharedPrefsManager
 ) {
     Column(
         modifier = modifier,
@@ -265,25 +270,28 @@ private fun OpponentsListHome(
         opponents.forEach { opponent ->
             OpponentItem(
                 opponent = opponent,
-                onClick = { onOpponentClick(opponent) }
+                onClick = { onOpponentClick(opponent) },
+                context=context,
+                pref=pref
             )
         }
     }
 }
 
-// Список боев для домашнего экрана (без изменений из OpponentsScreen)
 @Composable
 private fun BoutsListHome(
     bouts: List<LocalBout>,
     opponents: List<LocalOpponent>,
     onBoutClick: (LocalBout) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context:Context,
+    pref: SharedPrefsManager
 ) {
-    // Группируем бои по датам
+
     val groupedBouts = remember(bouts) {
         bouts.sortedByDescending { it.date }
             .groupBy { bout ->
-                SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(Date(bout.date))
+                SimpleDateFormat("dd MMMM yyyy", Locale(pref.getLanguage())).format(Date(bout.date))
             }
     }
 
@@ -292,7 +300,7 @@ private fun BoutsListHome(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         groupedBouts.forEach { (date, dateBouts) ->
-            // Заголовок с датой
+
             Text(
                 text = date,
                 color = Color.White,
@@ -306,19 +314,24 @@ private fun BoutsListHome(
                     BoutItem(
                     bout = bout,
                     opponent = opponent,
-                    onClick = { onBoutClick(bout) }
+                    onClick = { onBoutClick(bout) },
+                        context=context,
+                        pref=pref
                 )
             }
         }
     }
 }
 
-// Компоненты состояний для домашнего экрана
+
 @Composable
 private fun EmptyStateOpponents(
     text: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context,
+    pref: SharedPrefsManager,
 ) {
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.Center,
@@ -326,7 +339,7 @@ private fun EmptyStateOpponents(
     ) {
         Icon(
             painter = painterResource(R.drawable.fencing_mask),
-            contentDescription = "Пусто",
+            contentDescription = getString(context,R.string.empty,pref.getLanguage()),
             tint = Color(100, 100, 100),
             modifier = Modifier.size(80.dp)
         )
@@ -345,7 +358,9 @@ private fun EmptyStateOpponents(
 private fun ErrorStateOpponents(
     message: String,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context,
+    pref: SharedPrefsManager,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -354,7 +369,7 @@ private fun ErrorStateOpponents(
     ) {
         Icon(
             painter = painterResource(R.drawable.error),
-            contentDescription = "Ошибка",
+            contentDescription = getString(context,R.string.error_e,pref.getLanguage()),
             tint = Color(0xFFF44336),
             modifier = Modifier.size(80.dp)
         )
@@ -379,7 +394,7 @@ private fun ErrorStateOpponents(
             ),
             modifier = Modifier.height(36.dp)
         ) {
-            Text("Повторить", fontSize = 14.sp)
+            Text(getString(context,R.string.retry,pref.getLanguage()), fontSize = 14.sp)
         }
     }
 }
@@ -387,7 +402,9 @@ private fun ErrorStateOpponents(
 @Composable
 private fun EmptyStateBouts(
     text: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context,
+    pref: SharedPrefsManager,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -396,7 +413,7 @@ private fun EmptyStateBouts(
     ) {
         Icon(
             painter = painterResource(R.drawable.bout),
-            contentDescription = "Пусто",
+            contentDescription =getString(context,R.string.empty,pref.getLanguage()),
             tint = Color(100, 100, 100),
             modifier = Modifier.size(80.dp)
         )
@@ -415,7 +432,9 @@ private fun EmptyStateBouts(
 private fun ErrorStateBouts(
     message: String,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context,
+    pref: SharedPrefsManager,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -424,7 +443,7 @@ private fun ErrorStateBouts(
     ) {
         Icon(
             painter = painterResource(R.drawable.error),
-            contentDescription = "Ошибка",
+            contentDescription = getString(context,R.string.error_e,pref.getLanguage()),
             tint = Color(0xFFF44336),
             modifier = Modifier.size(80.dp)
         )
@@ -449,14 +468,7 @@ private fun ErrorStateBouts(
             ),
             modifier = Modifier.height(36.dp)
         ) {
-            Text("Повторить", fontSize = 14.sp)
+            Text(getString(context,R.string.retry,pref.getLanguage()), fontSize = 14.sp)
         }
     }
 }
-
-// Нужно добавить импорт из OpponentsScreen или скопировать компоненты:
-// 1. OpponentItem
-// 2. BoutItem
-// 3. ScoreDisplay
-// 4. StatItem
-// 5. И функция расширения Bout.getResultText()

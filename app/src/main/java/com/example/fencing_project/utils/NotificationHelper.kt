@@ -56,8 +56,8 @@ object NotificationHelper {
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("Синхронизация данных")
             .setContentText(message)
-            .setSmallIcon(R.drawable.sync) // Используйте вашу иконку
-            .setAutoCancel(true) // Уведомление можно смахнуть
+            .setSmallIcon(R.drawable.sync)
+            .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .build()
@@ -71,15 +71,15 @@ object NotificationHelper {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("Ошибка синхронизации")
-            .setContentText(errorMessage.take(100)) // Ограничим длину текста
-            .setSmallIcon(R.drawable.sync) // Или создайте иконку ошибки
+            .setContentText(errorMessage.take(100))
+            .setSmallIcon(R.drawable.sync)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_ERROR)
             .build()
 
         val notificationManager = context.getSystemService(NotificationManager::class.java)
-        notificationManager.notify(NOTIFICATION_ID + 1, notification) // Другой ID для ошибок
+        notificationManager.notify(NOTIFICATION_ID + 1, notification)
     }
 
     fun cancelAllNotifications(context: Context) {

@@ -1,5 +1,6 @@
 package com.example.fencing_project.view.components
 
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,10 +25,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.fencing_project.R
+import com.example.fencing_project.getString
+import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.utils.formatDate
 import com.example.fencing_project.viewmodel.SyncViewModel
@@ -36,16 +41,14 @@ import java.util.Date
 @Composable
 fun RestoreDataDialog(
     onDismiss: () -> Unit,
-    viewModel: SyncViewModel = hiltViewModel()
+    viewModel: SyncViewModel = hiltViewModel(),
+    context: Context,
+    pref: SharedPrefsManager
 ) {
     val syncState by viewModel.syncState.collectAsState()
     val lastSyncDate by viewModel.lastSyncDate.collectAsState()
     val hasSyncData by viewModel.hasSyncData.collectAsState()
-
-    // Состояние диалога: 0 - проверка, 1 - вопрос, 2 - загрузка, 3 - результат
     var dialogState by remember { mutableStateOf(0) }
-
-    // При открытии диалога проверяем наличие резервной копии
     LaunchedEffect(Unit) {
         dialogState = 0
         if (syncState !is UIState.Loading) {
@@ -53,27 +56,25 @@ fun RestoreDataDialog(
         }
     }
 
-    // Обновляем состояние диалога в зависимости от состояния синхронизации
     LaunchedEffect(syncState) {
         when (syncState) {
             is UIState.Loading -> {
                 if (lastSyncDate == 0L) {
-                    dialogState = 0 // Проверка
+                    dialogState = 0
                 } else if (dialogState == 1) {
-                    dialogState = 2 // Началась загрузка
+                    dialogState = 2
                 }
             }
             is UIState.Success -> {
-                if (dialogState == 2) {
-                    dialogState = 3 // Загрузка завершена
+                if (dialogState == 1) {
+                    dialogState = 3
                 } else if (dialogState == 0) {
-                    dialogState = 1 // Проверка завершена, показываем вопрос
+                    dialogState = 1
                 }
             }
             is UIState.Error -> {
-                if (dialogState == 2) {
-                    dialogState = 3 // Загрузка завершилась с ошибкой
-                }
+                    dialogState = 3
+
             }
             else -> {}
         }
@@ -81,7 +82,7 @@ fun RestoreDataDialog(
 
     AlertDialog(
         onDismissRequest = {
-            if (dialogState != 2) { // Нельзя закрыть во время загрузки
+            if (dialogState != 2) {
                 onDismiss()
                 viewModel.resetState()
             }
@@ -89,11 +90,10 @@ fun RestoreDataDialog(
         title = {
             Text(
                 when (dialogState) {
-                    0 -> "Проверка..."
-                    1 -> "Восстановление данных"
-                    2 -> "Восстановление..."
-                    3 -> "Результат"
-                    else -> "Восстановление данных"
+                    0 -> getString(context,R.string.checking,pref.getLanguage())
+                    1 -> getString(context,R.string.recovery_data,pref.getLanguage())
+                    3 -> getString(context,R.string.recovery_data,pref.getLanguage())
+                    else ->  getString(context,R.string.recovery_data,pref.getLanguage())
                 },
                 color = Color.White,
                 fontWeight = FontWeight.Bold
@@ -102,7 +102,7 @@ fun RestoreDataDialog(
         text = {
             Column {
                 when (dialogState) {
-                    0 -> { // Проверка резервной копии
+                    0 -> {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center,
@@ -114,15 +114,15 @@ fun RestoreDataDialog(
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Проверка резервной копии...", color = Color.White)
+                            Text(getString(context,R.string.recovery_check,pref.getLanguage()), color = Color.White)
                         }
                     }
 
-                    1 -> { // Вопрос о восстановлении
+                    1 -> {
                         if (hasSyncData && lastSyncDate > 0) {
                             Column {
                                 Text(
-                                    text = "Найдена резервная копия от:",
+                                    text = getString(context,R.string.recovery_found,pref.getLanguage()),
                                     color = Color.White.copy(alpha = 0.8f),
                                     fontSize = 14.sp
                                 )
@@ -139,7 +139,7 @@ fun RestoreDataDialog(
                                 Spacer(modifier = Modifier.height(12.dp))
 
                                 Text(
-                                    "Все текущие данные будут заменены данными из резервной копии.",
+                                    getString(context,R.string.data_replace_recovery,pref.getLanguage()),
                                     color = Color.White,
                                     fontSize = 14.sp
                                 )
@@ -147,7 +147,7 @@ fun RestoreDataDialog(
                                 Spacer(modifier = Modifier.height(8.dp))
 
                                 Text(
-                                    "Это действие невозможно отменить.",
+                                    getString(context,R.string.action_no_cancel,pref.getLanguage()),
                                     color = Color(0xFFFF9800),
                                     fontSize = 13.sp
                                 )
@@ -155,7 +155,7 @@ fun RestoreDataDialog(
                                 Spacer(modifier = Modifier.height(4.dp))
 
                                 Text(
-                                    "Вы уверены, что хотите восстановить данные?",
+                                    getString(context,R.string.sure_recovery,pref.getLanguage()),
                                     color = Color.White.copy(alpha = 0.8f),
                                     fontSize = 13.sp
                                 )
@@ -166,7 +166,7 @@ fun RestoreDataDialog(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    "❌ Резервная копия не найдена",
+                                    getString(context,R.string.recovery_nout_found,pref.getLanguage()),
                                     color = Color(0xFFF44336),
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Medium
@@ -175,7 +175,7 @@ fun RestoreDataDialog(
                                 Spacer(modifier = Modifier.height(8.dp))
 
                                 Text(
-                                    "У вас нет сохраненных данных в облаке.",
+                                    getString(context,R.string.no_recovry_cloud,pref.getLanguage()),
                                     color = Color.White.copy(alpha = 0.7f),
                                     fontSize = 13.sp
                                 )
@@ -183,28 +183,7 @@ fun RestoreDataDialog(
                         }
                     }
 
-                    2 -> { // Идет загрузка
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(32.dp),
-                                color = Color(139, 0, 0),
-                                strokeWidth = 3.dp
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text("Восстановление данных...", color = Color.White)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                "Пожалуйста, не закрывайте приложение",
-                                color = Color.White.copy(alpha = 0.6f),
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-
-                    3 -> { // Результат
+                    3 -> {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.fillMaxWidth()
@@ -212,7 +191,7 @@ fun RestoreDataDialog(
                             when (syncState) {
                                 is UIState.Success -> {
                                     Text(
-                                        "✅ Данные успешно восстановлены!",
+                                        getString(context,R.string.start_recovery_background,pref.getLanguage()),
                                         color = Color(0xFF4CAF50),
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Medium
@@ -221,7 +200,7 @@ fun RestoreDataDialog(
 
                                 is UIState.Error -> {
                                     Text(
-                                        "❌ ${(syncState as UIState.Error).message}",
+                                        "${(syncState as UIState.Error).message}",
                                         color = Color(0xFFF44336),
                                         fontSize = 14.sp
                                     )
@@ -237,7 +216,7 @@ fun RestoreDataDialog(
         containerColor = Color(61, 61, 70),
         confirmButton = {
             when (dialogState) {
-                1 -> { // Вопрос - показываем кнопки "Да" и "Нет"
+                1 -> {
                     if (hasSyncData && lastSyncDate > 0) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -249,24 +228,22 @@ fun RestoreDataDialog(
                                     viewModel.resetState()
                                 }
                             ) {
-                                Text("Нет", color = Color.White)
+                                Text(getString(context,R.string.no,pref.getLanguage()), color = Color.White)
                             }
 
                             Button(
                                 onClick = {
-                                    viewModel.loadDataFromCloud()
-                                    //viewModel.startBackgroundRestore()
+                                    viewModel.startBackgroundRestore()
                                 },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(139, 0, 0),
                                     contentColor = Color.White
                                 )
                             ) {
-                                Text("Да, восстановить", fontSize = 14.sp)
+                                Text(getString(context,R.string.yes_recovery,pref.getLanguage()), fontSize = 14.sp)
                             }
                         }
                     } else {
-                        // Если нет резервной копии, только кнопка "ОК"
                         Button(
                             onClick = {
                                 onDismiss()
@@ -283,7 +260,7 @@ fun RestoreDataDialog(
                     }
                 }
 
-                2 -> { // Загрузка - кнопка отключена
+                2 -> {
                     Button(
                         onClick = {},
                         enabled = false,
@@ -293,11 +270,11 @@ fun RestoreDataDialog(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Восстановление...", fontSize = 14.sp)
+                        Text(getString(context,R.string.recovery,pref.getLanguage()), fontSize = 14.sp)
                     }
                 }
 
-                3 -> { // Результат - кнопка "Закрыть"
+                3 -> {
                     Button(
                         onClick = {
                             onDismiss()
@@ -309,36 +286,159 @@ fun RestoreDataDialog(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Закрыть", fontSize = 14.sp)
+                        Text(getString(context,R.string.close,pref.getLanguage()), fontSize = 14.sp)
                     }
                 }
 
-                else -> {} // Для состояния 0 не показываем кнопки
+                else -> {}
             }
         },
-        dismissButton = {
-            when (dialogState) {
-                0, 2 -> { // Во время проверки и загрузки скрываем кнопку отмены
-                    // Не показываем dismissButton
+
+    )
+}
+
+@Composable
+fun SyncDataDialog(
+    onDismiss: () -> Unit,
+    viewModel: SyncViewModel = hiltViewModel(),
+    text:String,
+    dismissText:String,
+    context: Context,
+    pref: SharedPrefsManager
+) {
+    val syncState by viewModel.syncState.collectAsState()
+    val lastSyncDate by viewModel.lastSyncDate.collectAsState()
+    val hasSyncData by viewModel.hasSyncData.collectAsState()
+
+    var dialogState by remember { mutableStateOf(1) }
+    LaunchedEffect(syncState) {
+        when (syncState) {
+
+            is UIState.Success -> {
+                if (dialogState == 1) {
+                    dialogState = 3
                 }
-                else -> { // В других состояниях показываем
-                    TextButton(
+            }
+
+            is UIState.Error -> {
+                dialogState = 3
+
+            }
+
+            else -> {}
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = {
+            onDismiss()
+            viewModel.resetState()
+
+        },
+        title = {
+            Text(
+                getString(context,R.string.save_data,pref.getLanguage()),
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                when (dialogState) {
+
+
+                    1 -> {
+
+                        Text(
+                            text,
+                            color = Color.White
+                        )
+
+                    }
+
+                    3 -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            when (syncState) {
+                                is UIState.Success -> {
+                                    Text(
+                                        getString(context,R.string.start_save_data_background,pref.getLanguage()),
+                                        color = Color(0xFF4CAF50),
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+
+                                is UIState.Error -> {
+                                    Text(
+                                        "${(syncState as UIState.Error).message}",
+                                        color = Color(0xFFF44336),
+                                        fontSize = 14.sp
+                                    )
+                                }
+
+                                else -> {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = Color(61, 61, 70),
+        confirmButton = {
+            when (dialogState) {
+                1 -> {
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    onDismiss()
+                                    viewModel.resetState()
+                                }
+                            ) {
+                                Text(dismissText, color = Color.White)
+                            }
+
+                            Button(
+                                onClick = {
+                                    viewModel.startBackgroundSync()
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(139, 0, 0),
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Text(getString(context,R.string.yes_save_data,pref.getLanguage()), fontSize = 14.sp)
+                            }
+                        }
+
+                }
+
+
+                3 -> {
+                    Button(
                         onClick = {
                             onDismiss()
                             viewModel.resetState()
                         },
-                        enabled = dialogState != 2
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(139, 0, 0),
+                            contentColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            when (dialogState) {
-                                1 -> "Отмена"
-                                else -> "Закрыть"
-                            },
-                            color = Color.White
-                        )
+                        Text(getString(context,R.string.close,pref.getLanguage()), fontSize = 14.sp)
                     }
                 }
+
+                else -> {}
             }
-        }
+        },
+
     )
 }

@@ -1,4 +1,3 @@
-// OpponentViewModel.kt
 package com.example.fencing_project.viewmodel
 
 import android.net.Uri
@@ -8,8 +7,6 @@ import com.example.fencing_project.data.local.LocalBoutRepository
 import com.example.fencing_project.data.local.LocalOpponent
 import com.example.fencing_project.data.local.LocalStorageManager
 import com.example.fencing_project.data.repository.AuthRepository
-import com.example.fencing_project.data.repository.BoutRepository
-import com.example.fencing_project.utils.SupabaseStorageManager
 import com.example.fencing_project.utils.UIState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,8 +17,6 @@ import javax.inject.Inject
 @HiltViewModel
 class OpponentViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-//    private val repository: BoutRepository,
-//    private val storageManager: SupabaseStorageManager
     private val repository: LocalBoutRepository,
     private val storageManager: LocalStorageManager
 ) : ViewModel() {
@@ -52,21 +47,17 @@ class OpponentViewModel @Inject constructor(
                     weaponHand = weaponHand,
                     weaponType = weaponType,
                     comment = comment,
-                    //avatarUrl = "",
                     createdBy = createdBy
                 )
 
                 val opponentId = repository.addOpponent(opponent)
                 var avatarUrl = ""
-                println("DEBUG: OpponentId = ${opponentId}")
-                // Если есть аватарка, загружаем ее
-                if (avatarUri != null /*&& opponentId.isNotBlank()*/) {
+                if (avatarUri != null ) {
                     val uploadedUrl = storageManager.uploadOpponentAvatar(
                         userId = createdBy,
                         opponentId = (opponentId),
                         imageUri = avatarUri
                     )
-                    println("DEBUG: storage вернул ${uploadedUrl}")
                     avatarUrl = uploadedUrl ?: ""
                     if (avatarUrl.isNotBlank()) {
                         repository.updateOpponentAvatar(opponentId, avatarUrl)
@@ -93,20 +84,11 @@ class OpponentViewModel @Inject constructor(
             try {
                 val userId = authRepository.getUserId()
                 if (userId != null) {
-                    println("DEBUG: Начинаем обновление соперника $opponentId")
-
-                    // 1. Получаем старого соперника
                     val oldOpponent = repository.getOpponent(opponentId)
                     val oldAvatarUrl = oldOpponent?.avatarPath
-                    println("DEBUG: Старая аватарка: $oldAvatarUrl")
-
                     var newAvatarUrl = oldAvatarUrl ?: ""
 
-                    // 2. Обрабатываем аватарку (если есть новая)
                     if (avatarUri != null) {
-                        println("DEBUG: Загружаем новую аватарку...")
-
-                        // Сначала загружаем новую
                         val uploadedUrl = storageManager.uploadOpponentAvatar(
                             userId = userId,
                             opponentId = opponentId,
@@ -115,183 +97,31 @@ class OpponentViewModel @Inject constructor(
 
                         if (uploadedUrl != null) {
                             newAvatarUrl = uploadedUrl
-                            println("DEBUG: Новая аватарка загружена: $newAvatarUrl")
 
-                            // Удаляем старую (после успешной загрузки новой)
-
-                        } else {
-                            println("DEBUG: Не удалось загрузить новую аватарку")
                         }
                     }
-
-                    // 3. Обновляем в БД с правильным avatarPath
                     val updatedOpponent = oldOpponent?.copy(
                         name = name,
                         weaponHand = weaponHand,
                         weaponType = weaponType,
                         comment = comment,
-                        avatarPath = newAvatarUrl  // ← ОБЯЗАТЕЛЬНО обновляем путь
+                        avatarPath = newAvatarUrl
                     ) ?: return@launch
 
                     repository.updateOpponent(updatedOpponent)
-
-                    println("DEBUG: Проверяем обновленного соперника:")
                     val finalOpponent = repository.getOpponent(opponentId)
-                    println("DEBUG: - Имя: ${finalOpponent?.name}")
-                    println("DEBUG: - Аватарка: ${finalOpponent?.avatarPath}")
-
                     _saveOpponentState.value = UIState.Success("Соперник обновлен")
 
                 } else {
                     _saveOpponentState.value = UIState.Error("Пользователь не авторизован")
                 }
             } catch (e: Exception) {
-                println("DEBUG: Ошибка обновления: ${e.message}")
                 e.printStackTrace()
                 _saveOpponentState.value = UIState.Error(e.message ?: "Ошибка обновления")
             }
         }
     }
 
-    // OpponentViewModel.kt
-//    fun updateOpponent(
-//        opponentId: Long,
-//        name: String,
-//        weaponHand: String,
-//        weaponType: String,
-//        comment: String,
-//        avatarUri: Uri?
-//    ) {
-//        _saveOpponentState.value = UIState.Loading
-//
-//        viewModelScope.launch {
-//            try {
-//                val currentUser = authRepository.getCurrentUser()
-//                if (currentUser != null) {
-//                    println("DEBUG: Начинаем обновление соперника $opponentId")
-//
-//                    // 1. Получаем старого соперника
-//                    val oldOpponent = repository.getOpponent(opponentId)
-//                    val oldAvatarUrl = oldOpponent?.avatarPath
-//                    println("DEBUG: Старая аватарка: $oldAvatarUrl")
-//
-//                    var newAvatarUrl = oldAvatarUrl
-//
-//                    // 2. Обрабатываем аватарку (если есть новая)
-//                    if (avatarUri != null) {
-//                        println("DEBUG: Загружаем новую аватарку...")
-//
-//                        // Сначала загружаем новую
-//                        val uploadedUrl = storageManager.uploadOpponentAvatar(
-//                            userId = currentUser.uid,
-//                            opponentId = opponentId,
-//                            imageUri = avatarUri
-//                        )
-//
-//                        if (uploadedUrl != null) {
-//                            newAvatarUrl = uploadedUrl
-//                            println("DEBUG: Новая аватарка загружена: $newAvatarUrl")
-//
-//                            // ТЕПЕРЬ удаляем старую (после успешной загрузки новой)
-//                            if (!oldAvatarUrl.isNullOrBlank()) {
-//                                println("DEBUG: Удаляем старую аватарку: $oldAvatarUrl")
-//                                storageManager.deleteOpponentAvatar(currentUser.uid,opponentId)
-//                            }
-//                        } else {
-//                            println("DEBUG: Не удалось загрузить новую аватарку")
-//                            // Оставляем старую
-//                        }
-//                    }
-//
-//                    // 3. Обновляем в Firebase и ЖДЕМ завершения
-//                    println("DEBUG: Обновляем данные в Firebase...")
-//                    repository.updateOpponent(
-//                        opponentId = opponentId,
-//                        name = name,
-//                        weaponHand = weaponHand,
-//                        weaponType = weaponType,
-//                        comment = comment,
-//                        avatarUrl = newAvatarUrl ?: ""
-//                    )
-//
-//                    // 4. Даем время на синхронизацию
-//                    //delay(500) // Небольшая задержка для синхронизации
-//
-//                    // 5. Проверяем, что обновилось
-//                    val updatedOpponent = repository.getOpponent(opponentId)
-//                    println("DEBUG: Проверяем обновленного соперника:")
-//                    println("DEBUG: - Имя: ${updatedOpponent?.name}")
-//                    println("DEBUG: - Новая аватарка: ${updatedOpponent?.avatarPath}")
-//
-//                    _saveOpponentState.value = UIState.Success("Соперник обновлен")
-//
-//                } else {
-//                    _saveOpponentState.value = UIState.Error("Пользователь не авторизован")
-//                }
-//            } catch (e: Exception) {
-//                println("DEBUG: Ошибка обновления: ${e.message}")
-//                e.printStackTrace()
-//                _saveOpponentState.value = UIState.Error(e.message ?: "Ошибка обновления")
-//            }
-//        }
-//    }
-
-//    fun updateOpponent(
-//        opponentId: String,
-//        name: String,
-//        weaponHand: String,
-//        weaponType: String,
-//        comment: String = "",
-//        avatarUri: Uri? = null
-//    ) {
-//        viewModelScope.launch {
-//            _saveOpponentState.value = UIState.Loading
-//            try {
-//                val currentUser = authRepository.currentUser()
-//                if (currentUser != null) {
-//                    // Получаем текущего соперника
-//                    val currentOpponent = repository.getOpponent(opponentId)
-//                    if (currentOpponent != null) {
-//                        var avatarUrl = currentOpponent.avatarUrl
-//
-//                        if (!avatarUrl.isNullOrBlank()) {
-//                            println("DEBUG: Удаляем старую аватарку: $avatarUrl")
-//                            storageManager.deleteOpponentAvatar(
-//                                userId = currentUser.uid,
-//                                opponentId = opponentId
-//                            )
-//                        }
-//                        // Если есть новая аватарка, загружаем ее
-//                        if (avatarUri != null) {
-//                            val uploadedUrl = storageManager.uploadOpponentAvatar(
-//                                userId = currentOpponent.createdBy,
-//                                opponentId = opponentId,
-//                                imageUri = avatarUri
-//                            )
-//                            avatarUrl = uploadedUrl ?: avatarUrl
-//                        }
-//
-//                        // Обновляем соперника
-//                        repository.updateOpponent(
-//                            opponentId = opponentId,
-//                            name = name,
-//                            weaponHand = weaponHand,
-//                            weaponType = weaponType,
-//                            comment = comment,
-//                            avatarUrl = avatarUrl
-//                        )
-//
-//                        _saveOpponentState.value = UIState.Success("Соперник обновлен")
-//                    } else {
-//                        _saveOpponentState.value = UIState.Error("Соперник не найден")
-//                    }
-//                }
-//                } catch (e: Exception) {
-//                    _saveOpponentState.value = UIState.Error(e.message ?: "Ошибка обновления")
-//                }
-//
-//        }
-//    }
 
     fun deleteOpponent(opponentId: Long) {
         viewModelScope.launch {

@@ -1,4 +1,3 @@
-// OpponentEditScreen.kt
 package com.example.fencing_project.view
 
 import android.graphics.Bitmap
@@ -6,7 +5,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -20,7 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,10 +31,12 @@ import com.canhub.cropper.CropImageOptions
 import com.canhub.cropper.CropImageView
 import com.example.fencing_project.R
 import com.example.fencing_project.data.local.LocalOpponent
+import com.example.fencing_project.getString
 
 import com.example.fencing_project.utils.SharedPrefsManager
 import com.example.fencing_project.utils.UIState
 import com.example.fencing_project.viewmodel.OpponentViewModel
+import io.ktor.http.websocket.websocketServerAccept
 import kotlinx.coroutines.launch
 
 
@@ -49,12 +49,12 @@ fun OpponentEditScreen(
     opponentId: Long? = null,
     opponentViewModel: OpponentViewModel = hiltViewModel()
 ) {
-    println("DEBUG: opponentId = ${opponentId}")
+
+    val context = LocalContext.current
     val userId = pref.getUserId()
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Состояния формы
     var opponentName by remember { mutableStateOf("") }
     var opponentWeaponHand by remember { mutableStateOf("") }
     var opponentWeaponType by remember { mutableStateOf("") }
@@ -64,16 +64,16 @@ fun OpponentEditScreen(
     var expandedWeaponHand by remember { mutableStateOf(false) }
     var expandedWeaponType by remember { mutableStateOf(false) }
 
-    val menuItemsWeaponHand = listOf("Правая", "Левая")
-    val menuItemsWeaponType = listOf("Шпага", "Рапира", "Сабля")
+    val menuItemsWeaponHand = listOf(getString(context,R.string.right,pref.getLanguage()),
+       getString(context,R.string.left,pref.getLanguage()))
+    val menuItemsWeaponType = listOf(getString(context,R.string.epee,pref.getLanguage()),
+        getString(context,R.string.foil,pref.getLanguage()), getString(context,R.string.sabre,pref.getLanguage())
+    )
 
-
-    // Состояния ViewModel
     val opponentState by opponentViewModel.opponentState.collectAsState()
     val saveOpponentState by opponentViewModel.saveOpponentState.collectAsState()
     val deleteOpponentState by opponentViewModel.deleteOpponentState.collectAsState()
 
-    // Состояния для диалогов
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var successMessage by remember { mutableStateOf("") }
@@ -97,14 +97,14 @@ fun OpponentEditScreen(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            // Запускаем обрезку после выбора фото
             val options = CropImageContractOptions(
                 uri,
                 CropImageOptions(
-                    activityTitle = "Обрезать фото",
+                    activityTitle = getString(context
+                            ,R.string.crop_image, pref.getLanguage()),
                     aspectRatioX = 1,
                     aspectRatioY = 1,
-                    cropShape = CropImageView.CropShape.OVAL, // Круглая форма
+                    cropShape = CropImageView.CropShape.OVAL,
                     fixAspectRatio = true,
                     guidelines = CropImageView.Guidelines.ON,
                     outputCompressFormat = Bitmap.CompressFormat.JPEG,
@@ -115,37 +115,38 @@ fun OpponentEditScreen(
         }
     }
 
-    // Загружаем данные при открытии экрана
     LaunchedEffect(key1 = opponentId) {
         if (opponentId != null) {
             opponentViewModel.getOpponent(opponentId)
         }
     }
 
-    // Заполняем форму данными соперника при загрузке
     LaunchedEffect(opponentState) {
         if (opponentState is UIState.Success && opponentId != null) {
             val opponent = (opponentState as UIState.Success<LocalOpponent>).data
 
             opponentName = opponent.name
-            opponentWeaponHand = opponent.weaponHand
-            opponentWeaponType = opponent.weaponType
+            opponentWeaponHand = if(opponent.weaponHand=="right"){getString(context,R.string.right,pref.getLanguage())}else{getString(context,R.string.left,pref.getLanguage())}
+            opponentWeaponType = if(opponent.weaponType=="epee"){getString(context,R.string.epee,pref.getLanguage())}else if(opponent.weaponType=="foil"){getString(context,R.string.foil,pref.getLanguage())}else{getString(context,R.string.sabre,pref.getLanguage())}
             opponentComment = opponent.comment
         }
     }
 
-    // Обработка состояния сохранения
     LaunchedEffect(saveOpponentState) {
         when (saveOpponentState) {
             is UIState.Success -> {
-                successMessage = if (opponentId == null) "Соперник успешно добавлен" else "Соперник успешно обновлен"
+                successMessage = if (opponentId == null) getString(context,R.string.add_opponent_successfull, pref.getLanguage()) else getString(
+                    context,
+                    R.string.change_opponent_successfull,
+                    pref.getLanguage()
+                )
                 showSuccessDialog = true
                 opponentViewModel.resetSaveState()
             }
             is UIState.Error -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
-                        message = "Ошибка: ${(saveOpponentState as UIState.Error).message}",
+                        message = getString(context,R.string.error,pref.getLanguage()),
                         actionLabel = "OK",
                         duration = SnackbarDuration.Short
                     )
@@ -156,19 +157,22 @@ fun OpponentEditScreen(
         }
     }
 
-    // Обработка состояния удаления
+
     LaunchedEffect(deleteOpponentState) {
         when (deleteOpponentState) {
             is UIState.Success -> {
                 showDeleteConfirmationDialog = false
                 opponentViewModel.resetDeleteState()
-                successMessage = "Соперник успешно удален"
+                successMessage = getString(context,R.string.delete_opponent_successfull,pref.getLanguage())
                 showSuccessDialog = true
             }
             is UIState.Error -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
-                        message = "Ошибка удаления: ${(deleteOpponentState as UIState.Error).message}",
+                        message = getString(context,
+                            R.string.error_delete,
+                            pref.getLanguage()
+                        ),
                         actionLabel = "OK",
                         duration = SnackbarDuration.Short
                     )
@@ -179,7 +183,7 @@ fun OpponentEditScreen(
         }
     }
 
-    // Диалог подтверждения удаления
+
     if (showDeleteConfirmationDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -189,13 +193,13 @@ fun OpponentEditScreen(
             },
             title = {
                 Text(
-                    "Удалить соперника?",
+                    getString(context,R.string.delete_opponent_qs,pref.getLanguage()),
                     color = Color.White
                 )
             },
             text = {
                 Text(
-                    "Вы уверены, что хотите удалить этого соперника? Все связанные бои также будут удалены.",
+                    getString(context,R.string.you_sure_delete_opponent,pref.getLanguage()),
                     color = Color.White
                 )
             },
@@ -214,7 +218,7 @@ fun OpponentEditScreen(
                         contentColor =Color.White
                     )
                 ) {
-                    Text("Удалить")
+                    Text(getString(context,R.string.delete_btn,pref.getLanguage()))
                 }
             },
             dismissButton = {
@@ -229,13 +233,13 @@ fun OpponentEditScreen(
                         contentColor = Color.White
                     )
                 ) {
-                    Text("Отмена")
+                    Text(getString(context,R.string.cancel,pref.getLanguage()))
                 }
             }
         )
     }
 
-    // Диалог успешного действия
+
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -244,7 +248,7 @@ fun OpponentEditScreen(
             },
             title = {
                 Text(
-                    "Успешно",
+                    getString(context,R.string.successfull,pref.getLanguage()),
                     color = Color.White
                 )
             },
@@ -272,11 +276,12 @@ fun OpponentEditScreen(
         )
     }
 
-    // Заголовок экрана
-    val screenTitle = if (opponentId == null) "Новый соперник" else "Редактировать соперника"
-    val buttonText = if (opponentId == null) "Добавить соперника" else "Сохранить изменения"
-
-    // Проверяем, идет ли загрузка
+    val screenTitle = if (opponentId == null) getString(context,R.string.new_opponent, pref.getLanguage()) else getString(
+        context,
+        R.string.change_opponent,
+        pref.getLanguage()
+    )
+    val buttonText = if (opponentId == null) getString(context,R.string.add_opponent,pref.getLanguage()) else getString(context,R.string.save_changes,pref.getLanguage())
     val isLoading = saveOpponentState is UIState.Loading || deleteOpponentState is UIState.Loading
 
     Scaffold(
@@ -318,7 +323,9 @@ fun OpponentEditScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(modifier = Modifier.padding(10.dp).size(230.dp)) {
+                Box(modifier = Modifier
+                    .padding(10.dp)
+                    .size(230.dp)) {
                     if (selectedImageUri != null) {
                         AsyncImage(
                             model = selectedImageUri,
@@ -337,7 +344,7 @@ fun OpponentEditScreen(
                             error = painterResource(R.drawable.avatar)
                         )
                     } else {
-                        // Показываем загруженную аватарку из БД или аватар по умолчанию
+
                         AsyncImage(
                             model = (opponentState as? UIState.Success<LocalOpponent>)?.data?.avatarPath,
                             contentDescription = "Аватар соперника",
@@ -360,7 +367,9 @@ fun OpponentEditScreen(
                         onClick = {pickMedia.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                         )},
-                        modifier = Modifier.padding(top = 160.dp, start = 160.dp).size(45.dp),
+                        modifier = Modifier
+                            .padding(top = 160.dp, start = 160.dp)
+                            .size(45.dp),
                         shape = CircleShape,
                         colors = IconButtonColors(
                             containerColor = Color.White,
@@ -394,17 +403,16 @@ fun OpponentEditScreen(
 
                     ) {
                         Text(
-                            "Добавить бой с этим соперником  →",
+                            getString(context,R.string.add_bout_with_opponent,pref.getLanguage()),
                             fontSize = 14.sp,
                         )
                     }
                 }
 
-                // Поле для имени
                 OutlinedTextField(
                     value = opponentName,
                     onValueChange = { if (!isLoading) opponentName = it },
-                    label = { Text("Имя соперника*") },
+                    label = { Text(getString(context,R.string.name_opponent,pref.getLanguage())) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
@@ -416,22 +424,25 @@ fun OpponentEditScreen(
                         focusedContainerColor = Color(44, 44, 51),
                         unfocusedContainerColor = Color(44, 44, 51)
                     ),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp),
                     shape = RoundedCornerShape(20.dp),
                     enabled = !isLoading
                 )
 
-                // Поле для вооруженной руки с DropdownMenu
                 ExposedDropdownMenuBox(
                     expanded = expandedWeaponHand,
                     onExpandedChange = { if (!isLoading) expandedWeaponHand = !expandedWeaponHand },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp)
                 ) {
                     OutlinedTextField(
                         value = opponentWeaponHand,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Вооруженная рука*") },
+                        label = { Text(getString(context,R.string.weapon_hand,pref.getLanguage())) },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedWeaponHand)
                         },
@@ -446,7 +457,9 @@ fun OpponentEditScreen(
                             focusedContainerColor = Color(44, 44, 51),
                             unfocusedContainerColor = Color(44, 44, 51)
                         ),
-                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
                         shape = RoundedCornerShape(20.dp),
                         enabled = !isLoading
                     )
@@ -467,17 +480,18 @@ fun OpponentEditScreen(
                     }
                 }
 
-                // Поле для вида оружия с DropdownMenu
                 ExposedDropdownMenuBox(
                     expanded = expandedWeaponType,
                     onExpandedChange = { if (!isLoading) expandedWeaponType = !expandedWeaponType },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp)
                 ) {
                     OutlinedTextField(
                         value = opponentWeaponType,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Вид оружия*") },
+                        label = { Text(getString(context,R.string.weapon_type,pref.getLanguage())) },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedWeaponType)
                         },
@@ -492,7 +506,9 @@ fun OpponentEditScreen(
                             focusedContainerColor = Color(44, 44, 51),
                             unfocusedContainerColor = Color(44, 44, 51)
                         ),
-                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
                         shape = RoundedCornerShape(20.dp),
                         enabled = !isLoading
                     )
@@ -513,11 +529,10 @@ fun OpponentEditScreen(
                     }
                 }
 
-                // Поле комментария
                 OutlinedTextField(
                     value = opponentComment,
                     onValueChange = { if (!isLoading) opponentComment = it },
-                    label = { Text("Комментарий") },
+                    label = { Text(getString(context,R.string.comment,pref.getLanguage())) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
@@ -529,37 +544,37 @@ fun OpponentEditScreen(
                         focusedContainerColor = Color(44, 44, 51),
                         unfocusedContainerColor = Color(44, 44, 51)
                     ),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp),
                     shape = RoundedCornerShape(20.dp),
                     enabled = !isLoading
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Кнопка сохранения/добавления
                 Button(
                     onClick = {
                         if (!isLoading && opponentName.isNotBlank() &&
                             opponentWeaponHand.isNotBlank() && opponentWeaponType.isNotBlank()) {
-                            println("DEBUG  avatarurl = ${selectedImageUri}")
                             if (userId != null) {
+                                val opponentHand = if(opponentWeaponHand==getString(context,R.string.right,pref.getLanguage())){"right"}else{"left"}
+                                val opponentType = if(opponentWeaponType==getString(context,R.string.epee,pref.getLanguage())){"epee"}else if(opponentWeaponType==getString(context,R.string.foil,pref.getLanguage())){"foil"}else{"sabre"}
                                 if (opponentId == null) {
-                                    // Добавление
                                     opponentViewModel.addOpponent(
                                         createdBy = userId,
                                         name = opponentName,
-                                        weaponHand = opponentWeaponHand,
-                                        weaponType = opponentWeaponType,
+                                        weaponHand = opponentHand,
+                                        weaponType = opponentType,
                                         comment = opponentComment,
                                         avatarUri = selectedImageUri
                                     )
                                 } else {
-                                    // Обновление
                                     opponentViewModel.updateOpponent(
                                         opponentId = opponentId,
                                         name = opponentName,
-                                        weaponHand = opponentWeaponHand,
-                                        weaponType = opponentWeaponType,
+                                        weaponHand = opponentHand,
+                                        weaponType = opponentType,
                                         comment = opponentComment,
                                         avatarUri = selectedImageUri
                                     )
@@ -570,17 +585,17 @@ fun OpponentEditScreen(
                                 when {
                                     opponentName.isBlank() ->
                                         snackbarHostState.showSnackbar(
-                                            message = "Введите имя соперника",
+                                            message = getString(context,R.string.enter_name_opponent,pref.getLanguage()),
                                             duration = SnackbarDuration.Short
                                         )
                                     opponentWeaponHand.isBlank() ->
                                         snackbarHostState.showSnackbar(
-                                            message = "Выберите вооруженную руку",
+                                            message = getString(context,R.string.enter_weapon_hand,pref.getLanguage()),
                                             duration = SnackbarDuration.Short
                                         )
                                     opponentWeaponType.isBlank() ->
                                         snackbarHostState.showSnackbar(
-                                            message = "Выберите вид оружия",
+                                            message = getString(context,R.string.enter_weapon_type,pref.getLanguage()),
                                             duration = SnackbarDuration.Short
                                         )
                                 }
@@ -589,7 +604,7 @@ fun OpponentEditScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 0.dp, top=10.dp, start=10.dp,end=10.dp),
+                        .padding(bottom = 0.dp, top = 10.dp, start = 10.dp, end = 10.dp),
                     enabled = !isLoading && saveOpponentState !is UIState.Loading,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(139, 0, 0),
@@ -603,7 +618,6 @@ fun OpponentEditScreen(
 
                 }
 
-                // Кнопка удаления (только при редактировании)
                 if (opponentId != null) {
                     Button(
                         onClick = {
@@ -613,7 +627,7 @@ fun OpponentEditScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start=10.dp, end=10.dp, bottom=10.dp,top=10.dp),
+                            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 10.dp),
                         enabled = !isLoading && deleteOpponentState !is UIState.Loading,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF757575),
@@ -623,12 +637,11 @@ fun OpponentEditScreen(
                         ),
                         shape = RoundedCornerShape(20.dp)
                     ) {
-                        Text("Удалить соперника", fontSize = 15.sp, modifier = Modifier.padding(5.dp))
+                        Text(getString(context,R.string.delete_opponent,pref.getLanguage()), fontSize = 15.sp, modifier = Modifier.padding(5.dp))
                     }
                 }
             }
 
-            // Полупрозрачный оверлей с индикатором загрузки
             if (isLoading) {
                 Box(
                     modifier = Modifier
@@ -647,10 +660,10 @@ fun OpponentEditScreen(
                         )
                         Text(
                             text = when {
-                                deleteOpponentState is UIState.Loading -> "Удаление..."
+                                deleteOpponentState is UIState.Loading -> getString(context,R.string.delete,pref.getLanguage())
                                 saveOpponentState is UIState.Loading ->
-                                    if (opponentId == null) "Добавление..." else "Сохранение..."
-                                else -> "Загрузка..."
+                                    getString(context,R.string.save,pref.getLanguage())
+                                else -> getString(context,R.string.save,pref.getLanguage())
                             },
                             color = Color.White,
                             fontSize = 16.sp

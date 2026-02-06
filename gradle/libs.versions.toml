@@ -18,6 +18,7 @@ activityCompose = "1.11.0"
 navigationCompose = "2.9.5"
 composeBom = "2025.10.01"
 firebase-bom = "34.5.0"
+roomKtx = "2.8.4"
 
 
 [libraries]
@@ -55,6 +56,7 @@ play-services-auth = { module = "com.google.android.gms:play-services-auth", ver
 
 # Coroutines
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version = "1.10.2" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "roomKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

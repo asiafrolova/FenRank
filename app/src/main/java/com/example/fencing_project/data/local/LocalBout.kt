@@ -3,7 +3,6 @@ package com.example.fencing_project.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.util.Date
 
 @Entity(tableName = "bouts")
 data class LocalBout(

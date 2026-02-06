@@ -1,26 +1,28 @@
 package com.example.fencing_project.viewmodel
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.util.copy
 import com.example.fencing_project.data.local.LocalBoutRepository
 import com.example.fencing_project.data.local.LocalStorageManager
-
 import com.example.fencing_project.data.repository.AuthRepository
 import com.example.fencing_project.data.repository.BoutRepository
 import com.example.fencing_project.data.repository.SyncRepository
+import com.example.fencing_project.utils.AppLocaleManager
 import com.example.fencing_project.utils.SupabaseStorageManager
 import com.example.fencing_project.utils.UIState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// ProfileViewModel.kt
-// ProfileViewModel.kt
+
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
@@ -29,22 +31,14 @@ class ProfileViewModel @Inject constructor(
     private val storageManager: LocalStorageManager,
     private val boutRepository: LocalBoutRepository,
     private val syncRepository: SyncRepository,
-
 ) : ViewModel() {
 
     private val _updateState = MutableStateFlow<UIState<String>>(UIState.Idle)
     val updateState = _updateState.asStateFlow()
 
-    // Сделай userAvatarUrl StateFlow чтобы он обновлялся
     private val _userAvatarUrl = MutableStateFlow<String?>(null)
     val userAvatarUrl = _userAvatarUrl.asStateFlow()
 
-    init {
-        // Инициализируем URL при создании ViewModel
-        viewModelScope.launch {
-            updateAvatarUrl()
-        }
-    }
 
     private val _updateEmailState = MutableStateFlow<UIState<Unit>>(UIState.Idle)
     val updateEmailState = _updateEmailState.asStateFlow()
@@ -58,6 +52,11 @@ class ProfileViewModel @Inject constructor(
     private val _deleteProfileState = MutableStateFlow<UIState<Unit>>(UIState.Idle)
     val deleteProfileState = _deleteProfileState.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            updateAvatarUrl()
+        }
+    }
 
 
     fun updateEmail(
@@ -78,7 +77,7 @@ class ProfileViewModel @Inject constructor(
                 result.isSuccess -> UIState.Success(Unit)
                 else -> UIState.Error(result.exceptionOrNull()?.message ?: "Ошибка")
             }
-            println("DEBUG: state = ${_updateEmailState.value}")
+
         }
     }
 
@@ -100,7 +99,7 @@ class ProfileViewModel @Inject constructor(
                 result.isSuccess -> UIState.Success(Unit)
                 else -> UIState.Error(result.exceptionOrNull()?.message ?: "Ошибка")
             }
-            println("DEBUG: state = ${ _updatePasswordState.value}")
+
         }
     }
     fun sendPasswordResetEmail(currentEmail: String){
@@ -118,41 +117,28 @@ class ProfileViewModel @Inject constructor(
 
     }
 
-    // Получаем текущего пользователя
     fun getCurrentUser() = authRepository.getCurrentUser()
 
-    // Обновляем URL аватарки
     private suspend fun updateAvatarUrl() {
-//        val user = authRepository.getCurrentUser()
-//        _userAvatarUrl.value = user?.let {
-//            storageManager.generateUserAvatarUrl(it.uid)
-//        }
         val userId = authRepository.getUserId()
         _userAvatarUrl.value = storageManager.generateUserAvatarUrl(userId?:"")
     }
 
-    // Обновляем аватарку
     fun updateUserAvatar(avatarUri: Uri) {
         _updateState.value = UIState.Loading
 
         viewModelScope.launch {
             try {
-                val user = authRepository.getCurrentUser()
-                if (user != null) {
-                    println("DEBUG: Обновление аватарки для ${user.uid}")
+                val userId = authRepository.getUserId()
 
-                    // 1. Загружаем новую
+                if (userId != null) {
                     val avatarUrl = storageManager.uploadUserAvatar(
-                        userId = user.uid,
+                        userId = userId,
                         imageUri = avatarUri
                     )
-
                     if (avatarUrl != null) {
-                        println("DEBUG: Аватарка загружена, URL: $avatarUrl")
 
-                        // 2. Обновляем StateFlow
                         _userAvatarUrl.value = avatarUrl
-
                         _updateState.value = UIState.Success("Аватарка обновлена")
                     } else {
                         _updateState.value = UIState.Error("Не удалось загрузить")
@@ -171,13 +157,11 @@ class ProfileViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                //val user = authRepository.getCurrentUser()
                 val userId = authRepository.getUserId()
                 if (userId != null) {
                     val success = storageManager.deleteUserAvatar(userId)
 
                     if (success) {
-                        // Обновляем URL на null
                         _userAvatarUrl.value = null
 
                         _updateState.value = UIState.Success("Аватарка удалена")
@@ -193,9 +177,6 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun deleteProfile(){
-
-    }
     fun resetState() {
         _updateState.value = UIState.Idle
     }
@@ -208,33 +189,22 @@ class ProfileViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                //val user = authRepository.getCurrentUser()
                 val userId = authRepository.getUserId()
                 if (userId == null) {
                     _deleteProfileState.value = UIState.Error("Пользователь не найден")
                     return@launch
                 }
 
-
-
-                // 1. Удаляем аватарку пользователя из Supabase
                 storageManager.deleteUserAvatar(userId)
                 firebaseStorageManager.deleteUserAvatar(userId)
-
-
-                // 2. Удаляем всех соперников пользователя с их аватарками
-                //val opponentIds = authRepository.getUserOpponents(userId)
-                println("DEBUG: начинаем удалять соперников")
                 val opponentIds = boutRepository.getOpponentsByUser(userId)
                 val (bouts,firebaseOpponetnIds) = firebaseBoutRepository.getHomeScreenData(userId)
-                val opponentsList = opponentIds.first()  // ← Берем только первый снимок данных
-                println("DEBUG: найдено соперников для удаления: ${opponentsList.size}")
+                val opponentsList = opponentIds.first()
                 firebaseOpponetnIds.forEach { opponent ->
                     firebaseBoutRepository.deleteOpponent(opponent.id)
                     firebaseStorageManager.deleteOpponentAvatar(userId,(opponent.roomId).toString())
                 }
                 opponentsList.forEach { opponent ->
-                    println("DEBUG: удаляем соперника ${opponent.id} - ${opponent.name}")
                     boutRepository.deleteOpponent(opponent.id)
                     storageManager.deleteOpponentAvatar(userId, opponent.id)
                 }
@@ -243,9 +213,6 @@ class ProfileViewModel @Inject constructor(
                     syncRepository.deleteSync(sync.id)
                 }
 
-                println("DEBUG: закончили удалять соперников")
-
-                // 3. Удаляем аккаунт из Firebase Auth (удалит все данные через правила безопасности)
                 val result = authRepository.deleteAccount(currentPassword)
 
                 _deleteProfileState.value = if (result.isSuccess) {
@@ -260,8 +227,10 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    // Добавь в конце класса сброс состояния
     fun resetDeleteAccountState() {
         _deleteProfileState.value = UIState.Idle
     }
 }
+data class SettingState(
+    val selectedLanguage: String = ""
+)

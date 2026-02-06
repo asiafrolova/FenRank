@@ -46,8 +46,10 @@ class BackgroundRestoreService : Service() {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
+
             } else {
                 context.startService(intent)
+
             }
         }
 
@@ -62,16 +64,14 @@ class BackgroundRestoreService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+
         val userId = intent?.getStringExtra(EXTRA_USER_ID) ?: return START_NOT_STICKY
         val showNotification = intent.getBooleanExtra(EXTRA_SHOW_NOTIFICATION, true)
-
-        // Создаем начальное уведомление
         val notification = createNotification("Начинаем восстановление данных...", 0, false)
         startForeground(NOTIFICATION_ID, notification)
 
         scope.launch {
             try {
-                // Проверка интернета
                 if (!networkUtils.isInternetAvailable()) {
                     updateNotification("Нет подключения к интернету", 0, false)
                     if (showNotification) {
@@ -80,12 +80,10 @@ class BackgroundRestoreService : Service() {
                             "Восстановление не удалось: нет интернета"
                         )
                     }
-                    Thread.sleep(3000)
                     stopSelf()
                     return@launch
                 }
 
-                // Проверка наличия резервной копии
                 updateNotification("Проверка резервной копии...", 10, true)
                 val sync = syncRepository.getSyncByUserId(userId)
 
@@ -97,24 +95,14 @@ class BackgroundRestoreService : Service() {
                             "У вас нет сохраненных данных в облаке"
                         )
                     }
-                    Thread.sleep(3000)
                     stopSelf()
                     return@launch
                 }
 
-                // Шаг 1: Подготовка
                 updateNotification("Подготовка к восстановлению...", 20, true)
-                Thread.sleep(500)
-
-                // Шаг 2: Восстановление данных
                 updateNotification("Восстановление данных...", 40, true)
-
-                // Запускаем восстановление
-                syncRepository.updateLocalData(userId, showNotification = false, context = this@BackgroundRestoreService)
-
-                // Шаг 3: Завершение
+                syncRepository.updateLocalData(userId)
                 updateNotification("Восстановление завершено", 100, true)
-                Thread.sleep(2000)
 
                 if (showNotification) {
                     NotificationHelper.showSyncSuccessNotification(
@@ -123,7 +111,6 @@ class BackgroundRestoreService : Service() {
                     )
                 }
 
-                // Останавливаем сервис
                 stopSelf()
 
             } catch (e: Exception) {
@@ -134,7 +121,7 @@ class BackgroundRestoreService : Service() {
                         "Ошибка восстановления: ${e.message ?: "неизвестная ошибка"}"
                     )
                 }
-                Thread.sleep(3000)
+
                 stopSelf()
             }
         }
@@ -173,7 +160,7 @@ class BackgroundRestoreService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Восстановление")
             .setContentText(text)
-            .setSmallIcon(R.drawable.sync) // Можно создать отдельную иконку или использовать эту
+            .setSmallIcon(R.drawable.sync)
             .setProgress(100, progress, indeterminate)
             .setOngoing(true)
             .setOnlyAlertOnce(true)

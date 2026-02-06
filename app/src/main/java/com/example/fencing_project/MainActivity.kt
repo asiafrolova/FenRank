@@ -1,6 +1,9 @@
 package com.example.fencing_project
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.res.Configuration
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -33,6 +36,8 @@ import com.example.fencing_project.view.SettingsScreen
 import com.example.fencing_project.view.StatisticsScreen
 import com.example.fencing_project.view.SyncScreen
 import dagger.hilt.android.AndroidEntryPoint
+import io.ktor.client.plugins.HttpRequestRetry
+import java.util.Locale
 
 sealed class Routes(val route: String) {
 
@@ -48,7 +53,6 @@ sealed class Routes(val route: String) {
     object EditOpponent : Routes("edit_opponent/{opponentId}")
     object AddBoutWithOpponent : Routes("edit_bout_with/{opponentId}")
     object ProfileEdit : Routes("profile_edit")
-    object ChangePassword : Routes("change_password")
     object Settings: Routes("settings")
     object Statistics : Routes("statistics")
     object Sync : Routes("sync")
@@ -63,6 +67,15 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
 
         val sharedPrefs = SharedPrefsManager(this)
+        val lang = sharedPrefs.getLanguage()
+        val locale: Locale = Locale(lang)
+        Locale.setDefault(locale)
+        val config: Configuration = Configuration()
+        config.locale = locale
+        getResources().updateConfiguration(
+            config,
+            getResources().getDisplayMetrics()
+        )
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.light(
                 Color(139,0,0).toArgb(),
@@ -81,7 +94,7 @@ class MainActivity : ComponentActivity() {
                     LoginScreen(navController = navController, pref = sharedPrefs)
                 }
                 composable(Routes.Register.route) {
-                    RegisterScreen(navController = navController)
+                    RegisterScreen(navController = navController, pref = sharedPrefs)
                 }
                 composable(Routes.Home.route) {
 
@@ -101,11 +114,9 @@ class MainActivity : ComponentActivity() {
                     ChoiceAddScreen(navController = navController, pref = sharedPrefs)
                 }
                 composable(Routes.AddBoutScreen.route) {
-                    //AddBoutScreen(navController = navController, pref = sharedPrefs)
                     BoutEditScreen(navController =navController, pref = sharedPrefs)
                 }
                 composable (Routes.AddOpponentScreen.route){
-                    //AddOpponentScreen(navController = navController, pref = sharedPrefs)
                     OpponentEditScreen(navController=navController, pref = sharedPrefs)
                 }
                 composable(Routes.EditBout.route) { backStackEntry ->
@@ -113,16 +124,15 @@ class MainActivity : ComponentActivity() {
                     BoutEditScreen(
                         navController = navController,
                         pref = sharedPrefs,
-                        boutId = (boutId?:"0").toLong()// Передаем ID для редактирования
+                        boutId = (boutId?:"0").toLong()
                     )
                 }
                 composable(Routes.EditOpponent.route) { backStackEntry ->
                     val opponentId = backStackEntry.arguments?.getString("opponentId")
-                    println("DEBUG: opponentId in MainActivity = $opponentId")
                     OpponentEditScreen(
                         navController = navController,
                         pref = sharedPrefs,
-                        opponentId = ((opponentId)?:"0").toLong() // Передаем ID для редактирования
+                        opponentId = ((opponentId)?:"0").toLong()
                     )
                 }
                 composable(Routes.AddBoutWithOpponent.route) { backStackEntry ->
@@ -130,7 +140,7 @@ class MainActivity : ComponentActivity() {
                     BoutEditScreen(
                         navController = navController,
                         pref = sharedPrefs,
-                        startOpponentId = (opponentId?:"0").toLong() as Long? // Передаем ID для редактирования
+                        startOpponentId = (opponentId?:"0").toLong() as Long?
                     )
                 }
                 composable (Routes.ProfileEdit.route){
@@ -165,5 +175,11 @@ fun GreetingPreview() {
     Fencing_projectTheme {
         Greeting("Android")
     }
+}
+
+public fun getString(context: Context, resId:Int, locale:String):String{
+    val config = Configuration(context.resources.configuration)
+    config.setLocale(Locale(locale))
+    return context.createConfigurationContext(config).resources.getString(resId)
 }
 

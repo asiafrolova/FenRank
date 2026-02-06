@@ -3,7 +3,6 @@ package com.example.fencing_project.di
 
 import android.app.Application
 import android.content.Context
-import androidx.work.WorkerParameters
 import com.example.fencing_project.data.local.BoutDao
 import com.example.fencing_project.data.local.FencingDatabase
 import com.example.fencing_project.data.local.LocalBoutRepository
@@ -14,14 +13,13 @@ import com.example.fencing_project.data.local.OpponentDao
 import com.google.firebase.auth.FirebaseAuth
 import com.example.fencing_project.data.repository.AuthRepository
 import com.example.fencing_project.data.repository.BoutRepository
-import com.example.fencing_project.data.repository.SyncRepository
 import com.example.fencing_project.utils.AvatarStorageManager
 import com.example.fencing_project.utils.NetworkUtils
 
 
 import com.example.fencing_project.utils.SupabaseConfig
 import com.example.fencing_project.utils.SupabaseStorageManager
-import com.example.fencing_project.work.AlarmSyncScheduler
+
 import com.example.fencing_project.work.SyncServiceManager
 
 
@@ -48,7 +46,6 @@ object AppModule {
     @Provides
     @Singleton
     fun provideFirebaseAuth(app: Application): FirebaseAuth {
-        // Гарантируем, что Firebase инициализирован
         if (FirebaseApp.getApps(app).isEmpty()) {
             FirebaseApp.initializeApp(app)
         }
@@ -82,15 +79,11 @@ object AppModule {
     @Singleton
     fun provideFirebaseDatabase(): FirebaseDatabase {
         return FirebaseDatabase.getInstance()
-        // Если нужно указать URL базы данных:
-        // return FirebaseDatabase.getInstance("https://your-project.firebaseio.com/")
     }
 
     @Provides
     @Singleton
     fun provideSupabaseClient(): SupabaseClient {
-        println("DEBUG: Инициализация Supabase с URL: ${SupabaseConfig.SUPABASE_URL}")
-
         return try {
             createSupabaseClient(
                 supabaseUrl = SupabaseConfig.SUPABASE_URL,
@@ -100,7 +93,6 @@ object AppModule {
                 install(Storage)
             }
         } catch (e: Exception) {
-            println("DEBUG: Ошибка создания Supabase клиента: ${e.message}")
             throw e
         }
     }
@@ -143,7 +135,6 @@ object AppModule {
     fun provideAvatarStorageManager(
         localStorageManager: LocalStorageManager
     ): AvatarStorageManager {
-        // LocalStorageManager реализует AvatarStorageManager
         return localStorageManager
     }
 
@@ -159,17 +150,7 @@ object AppModule {
         return SyncServiceManager(context = context)
     }
 
-//    @Provides
-//    @Singleton
-//    fun providerSyncScheduler(@ApplicationContext context: Context): SyncScheduler{
-//        return SyncScheduler(context = context)
-//    }
 
-    @Provides
-    @Singleton
-    fun providerAlarmSyncScheduler(@ApplicationContext context: Context): AlarmSyncScheduler{
-        return AlarmSyncScheduler(context = context)
-    }
 
     @Provides
     @Singleton

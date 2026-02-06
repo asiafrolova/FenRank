@@ -1,27 +1,25 @@
 package com.example.fencing_project.data.model
 
-import java.util.Date
 import java.util.UUID
 
 data class Opponent(
     val roomId: Long=0,
     val id: String = UUID.randomUUID().toString(),
     val name: String = "",
-    val weaponHand: String = "", // "Правая", "Левая"
-    val weaponType: String = "", // "Рапира", "Сабля", "Шпага"
+    val weaponHand: String = "",
+    val weaponType: String = "",
     val comment: String = "",
     val avatarUrl: String = "",
-    val createdBy: String = "", // UID создателя
+    val createdBy: String = "",
     val createdAt:  Long = System.currentTimeMillis(),
 
-    // Добавляем поля для статистики
-    val totalBouts: Int = 0,      // Всего боев с этим соперником
-    val userWins: Int = 0,        // Победы пользователя
-    val opponentWins: Int = 0,    // Победы соперника
-    val draws: Int = 0,           // Ничьи
-    val totalUserScore: Int = 0,  // Всего набранных очков пользователем
-    val totalOpponentScore: Int = 0, // Всего набранных очков соперником
-    val lastBoutDate: Long? = null // Дата последнего боя
+    val totalBouts: Int = 0,
+    val userWins: Int = 0,
+    val opponentWins: Int = 0,
+    val draws: Int = 0,
+    val totalUserScore: Int = 0,
+    val totalOpponentScore: Int = 0,
+    val lastBoutDate: Long? = null
 ){
     constructor() : this(0,"", "", "", "", "","","", 0,
         0,0,0,0,0,0,null)
