@@ -177,6 +177,32 @@ class OpponentViewModel @Inject constructor(
             }
         }
     }
+    fun deleteOpponentAvatar(opponentId: Long, opponentAvatarUrl: String? = null) {
+        _saveOpponentState.value = UIState.Loading
+
+        viewModelScope.launch {
+            try {
+                val userId = authRepository.getUserId()
+                if (userId != null) {
+                    val success = repository.deleteOpponentAvatar(
+                        opponentId = opponentId,
+                        userId = userId,
+                        opponentAvatarUrl = opponentAvatarUrl
+                    )
+
+                    if (success) {
+                        _saveOpponentState.value = UIState.Success("Аватар соперника удален")
+                    } else {
+                        _saveOpponentState.value = UIState.Error("Ошибка удаления")
+                    }
+                } else {
+                    _saveOpponentState.value = UIState.Error("Пользователь не авторизован")
+                }
+            } catch (e: Exception) {
+                _saveOpponentState.value = UIState.Error(e.message ?: "Ошибка удаления")
+            }
+        }
+    }
     fun resetSaveState() {
         _saveOpponentState.value = UIState.Idle
     }

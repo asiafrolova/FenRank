@@ -229,4 +229,5 @@
     <string name="once_a_week">Once a week</string>
     <string name="once_a_month">Once a month</string>
     <string name="disabled">Disable</string>
+    <string name="clear_opponent_avatar">Clear the profile picture</string>
 </resources>

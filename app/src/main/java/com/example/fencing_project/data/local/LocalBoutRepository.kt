@@ -138,6 +138,23 @@ class LocalBoutRepository @Inject constructor(
             false
         }
     }
+    suspend fun deleteOpponentAvatar(
+        opponentId: Long,
+        userId: String,
+        opponentAvatarUrl: String? = null
+    ):Boolean{
+        return try {
+            val opponent = getOpponent(opponentId)
+            val actualUserId = opponent?.createdBy ?: userId
+            if (!opponentAvatarUrl.isNullOrBlank() || opponent?.avatarPath?.isNotBlank() == true) {
+                val avatarDeleted = avatarStorageManager.deleteOpponentAvatar(actualUserId, opponentId)
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
 
     suspend fun updateOpponentAvatar(opponentId: Long, avatarUrl: String) {
         try {

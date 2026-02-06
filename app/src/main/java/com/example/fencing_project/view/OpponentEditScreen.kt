@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -76,6 +77,7 @@ fun OpponentEditScreen(
 
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var showDeleteAvatarConfirmationDialog by remember { mutableStateOf(false) }
     var successMessage by remember { mutableStateOf("") }
 
     val currentOpponent = remember(opponentState) {
@@ -182,8 +184,60 @@ fun OpponentEditScreen(
             else -> {}
         }
     }
-
-
+    if(showDeleteAvatarConfirmationDialog){
+        AlertDialog(
+            onDismissRequest = {
+                if (deleteOpponentState !is UIState.Loading) {
+                    showDeleteAvatarConfirmationDialog = false
+                }
+            },
+            title = {
+                Text(
+                    getString(context,R.string.clear_profile_image,pref.getLanguage()),
+                    color = Color.White
+                )
+            },
+            text = {
+                Text(
+                    getString(context,R.string.you_sure_clear_image,pref.getLanguage()),
+                    color = Color.White
+                )
+            },
+            containerColor = Color(61, 61, 70),
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (opponentId != null && deleteOpponentState !is UIState.Loading) {
+                            opponentViewModel.deleteOpponentAvatar(opponentId, opponentAvatarUrl  = currentOpponent?.avatarPath)
+                            showDeleteAvatarConfirmationDialog = false
+                        }
+                    },
+                    enabled = deleteOpponentState !is UIState.Loading,
+                    colors = ButtonDefaults.textButtonColors(
+                        containerColor = Color(139, 0, 0),
+                        contentColor =Color.White
+                    )
+                ) {
+                    Text(getString(context,R.string.clear,pref.getLanguage()))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteAvatarConfirmationDialog = false
+                        opponentViewModel.resetDeleteState()
+                    },
+                    enabled = deleteOpponentState !is UIState.Loading,
+                    colors = ButtonDefaults.textButtonColors(
+                        containerColor = Color(44, 44, 51),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(getString(context,R.string.cancel,pref.getLanguage()))
+                }
+            }
+        )
+    }
     if (showDeleteConfirmationDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -639,7 +693,28 @@ fun OpponentEditScreen(
                     ) {
                         Text(getString(context,R.string.delete_opponent,pref.getLanguage()), fontSize = 15.sp, modifier = Modifier.padding(5.dp))
                     }
+                    Button(
+                        onClick = {
+                            if (!isLoading) {
+                                showDeleteAvatarConfirmationDialog = true
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                        enabled = !isLoading && deleteOpponentState !is UIState.Loading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF757575),
+                            contentColor = Color.White,
+                            disabledContainerColor = Color(0xFF757575).copy(alpha = 0.5f),
+                            disabledContentColor = Color.White.copy(alpha = 0.5f)
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Text(getString(context,R.string.clear_opponent_avatar,pref.getLanguage()), fontSize = 15.sp, modifier = Modifier.padding(5.dp))
+                    }
                 }
+
             }
 
             if (isLoading) {
