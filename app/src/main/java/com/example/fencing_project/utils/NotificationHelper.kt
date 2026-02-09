@@ -7,6 +7,7 @@ import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.example.fencing_project.R
+import kotlinx.coroutines.MainCoroutineDispatcher
 
 object NotificationHelper {
 

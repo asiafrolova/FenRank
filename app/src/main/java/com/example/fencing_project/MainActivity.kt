@@ -1,8 +1,11 @@
 package com.example.fencing_project
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Build
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -14,7 +17,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -39,6 +45,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.ktor.client.plugins.HttpRequestRetry
 import java.util.Locale
 
+
 sealed class Routes(val route: String) {
 
     object Home : Routes("home")
@@ -60,9 +67,17 @@ sealed class Routes(val route: String) {
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    companion object {
+        private const val REQUEST_CODE_NOTIFICATION = 1001
+        private const val REQUEST_CODE_BACKGROUND = 1002
+        private const val REQUEST_CODE_ALARM = 1003
+    }
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestAllPermissions()
+        }
 
         installSplashScreen()
 
@@ -159,7 +174,50 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    private fun requestAllPermissions() {
+        val permissionsToRequest = mutableListOf<String>()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.SCHEDULE_EXACT_ALARM
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionsToRequest.add(Manifest.permission.SCHEDULE_EXACT_ALARM)
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.RUN_USER_INITIATED_JOBS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionsToRequest.add(Manifest.permission.RUN_USER_INITIATED_JOBS)
+            }
+        }
+
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                permissionsToRequest.toTypedArray(),
+                REQUEST_CODE_BACKGROUND
+            )
+        }
+    }
 }
+
+
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {

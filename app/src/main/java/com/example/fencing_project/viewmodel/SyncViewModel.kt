@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import javax.inject.Inject
 
 @HiltViewModel
@@ -36,6 +37,43 @@ class SyncViewModel @Inject constructor(
     val hasSyncData: StateFlow<Boolean> = _hasSyncData.asStateFlow()
 
 
+    fun setupSyncSchedule(
+        userId: String,
+        frequency: SyncServiceManager.ScheduleFrequency,
+        hour: Int,
+        minute: Int,
+        dayOfWeek: Int = -1,
+        dayOfMonth: Int = -1
+    ) {
+        val syncManager = SyncServiceManager(context)
+
+        when(frequency) {
+            SyncServiceManager.ScheduleFrequency.DAILY -> {
+                syncManager.scheduleDailySync(userId, hour, minute)
+            }
+            SyncServiceManager.ScheduleFrequency.WEEKLY -> {
+
+                val calendarDayOfWeek = when(dayOfWeek) {
+                    0 -> Calendar.MONDAY
+                    1 -> Calendar.TUESDAY
+                    2 -> Calendar.WEDNESDAY
+                    3 -> Calendar.THURSDAY
+                    4 -> Calendar.FRIDAY
+                    5 -> Calendar.SATURDAY
+                    6 -> Calendar.SUNDAY
+                    else -> Calendar.MONDAY
+                }
+                syncManager.scheduleWeeklySync(userId, hour, minute, calendarDayOfWeek)
+            }
+            SyncServiceManager.ScheduleFrequency.MONTHLY -> {
+                val safeDayOfMonth = dayOfMonth.coerceIn(1, 31)
+                syncManager.scheduleMonthlySync(userId, hour, minute, safeDayOfMonth)
+            }
+            SyncServiceManager.ScheduleFrequency.DISABLED -> {
+                syncManager.cancelAllScheduledSyncs()
+            }
+        }
+    }
 
     fun checkSyncData() {
         viewModelScope.launch {
@@ -92,18 +130,10 @@ class SyncViewModel @Inject constructor(
             _syncState.value = UIState.Idle
         }
     }
-    fun scheduleSync(frequency: SyncServiceManager.ScheduleFrequency, hour: Int, minute: Int) {
 
-        viewModelScope.launch {
-            val userId = authRepository.getUserId()
-            if (userId != null) {
-                syncServiceManager.schedulePeriodicSync(userId, frequency, hour, minute)
-            }
-        }
-    }
 
     fun cancelScheduledSync() {
-        syncServiceManager.cancelScheduledSync()
+        syncServiceManager.cancelAllScheduledSyncs()
     }
 
     fun getCurrentSchedule() = syncServiceManager.getCurrentSchedule()
@@ -128,5 +158,9 @@ class SyncViewModel @Inject constructor(
         }else {
             _syncState.value = UIState.Error("Войдите в аккаунт")
         }
+    }
+    fun setupDailySync(userId: String, hour: Int, minute: Int) {
+        val syncManager = SyncServiceManager(context)
+        syncManager.scheduleDailySync(userId, hour, minute)
     }
 }

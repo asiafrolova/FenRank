@@ -6,13 +6,21 @@ import dagger.assisted.AssistedInject
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
-import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.example.fencing_project.data.repository.SyncRepository
 import com.example.fencing_project.utils.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicInteger
+
+object NotificationIdGenerator {
+    private val notificationId = AtomicInteger(1000)
+
+    fun getUniqueId(): Int {
+        return notificationId.incrementAndGet()
+    }
+}
 
 @HiltWorker
 class SyncWorker @AssistedInject constructor(

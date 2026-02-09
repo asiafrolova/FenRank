@@ -117,7 +117,8 @@ fun SyncScreen(navController: NavController, pref: SharedPrefsManager) {
                         onClick = { if (selectedFrequency == SyncServiceManager.ScheduleFrequency.DISABLED) {
                             viewModel.cancelScheduledSync()
                         } else {
-                            viewModel.scheduleSync(selectedFrequency, selectedHour, selectedMinute)
+                            viewModel.setupSyncSchedule(pref.getUserId()?:"",selectedFrequency,selectedHour,selectedMinute)
+
                         }
                             navController.popBackStack() },
                         modifier = Modifier.fillMaxWidth(),

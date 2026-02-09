@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
     <!-- Для Android 9 и ниже -->
 
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
@@ -11,6 +12,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -37,18 +39,21 @@
         android:localeConfig="@xml/locales_config"
         android:theme="@style/Theme.Fencing_project"
         tools:targetApi="31">
+
+        <!-- В AndroidManifest.xml ДОБАВЬТЕ -->
+        <service
+            android:name=".work.GuaranteedSyncService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:enabled="true"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
         <service
             android:name=".work.BackgroundSyncService"
             android:exported="false"
             android:foregroundServiceType="dataSync"
             android:enabled="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
-        <service
-            android:name=".work.BackgroundRestoreService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync"
-            android:permission="android.permission.BIND_JOB_SERVICE"/>
+
 
             <meta-data
                 android:name="autoStoreLocales"
