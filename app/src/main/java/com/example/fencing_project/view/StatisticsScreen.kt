@@ -103,7 +103,9 @@ private fun calculateStatistics(
     opponentsState: UIState<List<LocalOpponent>>,
     selectedYear: Int,
     selectedMonth: Int,
-    selectedOpponentId: Long?
+    selectedOpponentId: Long?,
+    pref: SharedPrefsManager,
+    context: Context
 ): StatisticsData {
     return when (boutsState) {
         is UIState.Success -> {
@@ -157,8 +159,10 @@ private fun calculateStatistics(
                 }
 
                 opponent?.weaponHand?.let { hand ->
-                    val stats = byWeaponHand.getOrPut(hand) { StatsByCategory() }
-                    byWeaponHand[hand] = stats.copy(
+                    val hand_res = if(hand=="right"){getString(context,R.string.right,pref.getLanguage())}else{getString(context,R.string.left,pref.getLanguage())}
+
+                    val stats = byWeaponHand.getOrPut(hand_res) { StatsByCategory() }
+                    byWeaponHand[hand_res] = stats.copy(
                         bouts = stats.bouts + 1,
                         victories = stats.victories + if (bout.userScore > bout.opponentScore) 1 else 0,
                         defeats = stats.defeats + if (bout.userScore < bout.opponentScore) 1 else 0,
@@ -170,8 +174,10 @@ private fun calculateStatistics(
 
 
                 opponent?.weaponType?.let { type ->
-                    val stats = byWeaponType.getOrPut(type) { StatsByCategory() }
-                    byWeaponType[type] = stats.copy(
+                    val type_res = if(type=="foil"){getString(context,R.string.foil,pref.getLanguage())}else if(type=="epee"){getString(context,R.string.epee,pref.getLanguage())}else{getString(context,R.string.sabre,pref.getLanguage())}
+
+                    val stats = byWeaponType.getOrPut(type_res) { StatsByCategory() }
+                    byWeaponType[type_res] = stats.copy(
                         bouts = stats.bouts + 1,
                         victories = stats.victories + if (bout.userScore > bout.opponentScore) 1 else 0,
                         defeats = stats.defeats + if (bout.userScore < bout.opponentScore) 1 else 0,
@@ -286,7 +292,9 @@ fun StatisticsScreen(
             opponentsState = opponentsState,
             selectedYear = selectedYear,
             selectedMonth = selectedMonth,
-            selectedOpponentId = selectedOpponentId
+            selectedOpponentId = selectedOpponentId,
+            pref = pref,
+            context = context,
         )
     }
 

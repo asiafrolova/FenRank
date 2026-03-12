@@ -68,7 +68,7 @@ fun OpponentsScreen(
     val WEAPON_HANDS = listOf(getString(context,R.string.right,pref.getLanguage()),
             getString(context,R.string.left,pref.getLanguage()))
     val BOUT_RESULTS = listOf(getString(context,R.string.victory,pref.getLanguage()),
-            getString(context,R.string.delete,pref.getLanguage()), getString(context,R.string.draw,pref.getLanguage()))
+            getString(context,R.string.defeat,pref.getLanguage()), getString(context,R.string.draw,pref.getLanguage()))
 
 
     val userId = pref.getUserId()
@@ -134,11 +134,14 @@ fun OpponentsScreen(
                             opponent.comment?.contains(filters.searchQuery, ignoreCase = true) == true
 
                     val matchesHand = filters.weaponHand?.let { hand ->
-                        opponent.weaponHand.equals(hand, ignoreCase = true)
+                        val hand_res = if(hand==getString(context,R.string.right,pref.getLanguage())){"right"}else{"left"}
+                        opponent.weaponHand.equals(hand_res, ignoreCase = true)
                     } ?: true
 
                     val matchesType = filters.weaponType?.let { type ->
-                        opponent.weaponType.equals(type, ignoreCase = true)
+                        val type_res = if(type==getString(context,R.string.foil,pref.getLanguage())){"foil"}else if(type==getString(context,R.string.epee,pref.getLanguage())){"epee"}else{"sabre"}
+
+                        opponent.weaponType.equals(type_res, ignoreCase = true)
                     } ?: true
 
                     matchesSearch && matchesHand && matchesType
@@ -177,11 +180,14 @@ fun OpponentsScreen(
                     } ?: true
 
                     val matchesHand = filters.weaponHand?.let { hand ->
-                        opponent?.weaponHand?.equals(hand, ignoreCase = true) == true
+                        val hand_res = if(hand==getString(context,R.string.right,pref.getLanguage())){"right"}else{"left"}
+                        opponent?.weaponHand?.equals(hand_res, ignoreCase = true) == true
                     } ?: true
 
                     val matchesType = filters.weaponType?.let { type ->
-                        opponent?.weaponType?.equals(type, ignoreCase = true) == true
+                        val type_res = if(type==getString(context,R.string.foil,pref.getLanguage())){"foil"}else if(type==getString(context,R.string.epee,pref.getLanguage())){"epee"}else{"sabre"}
+
+                        opponent?.weaponType?.equals(type_res, ignoreCase = true) == true
                     } ?: true
 
                     val matchesResult = filters.boutResult?.let { result ->
