@@ -39,4 +39,4 @@
 
 ### Для разработчиков
 ```bash
-git clone https://github.com/ТВОЙ_АККАУНТ/engarde.git
+git clone https://github.com/asiafrolova/FenRank.git
