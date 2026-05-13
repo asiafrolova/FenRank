@@ -941,7 +941,7 @@ private fun OpponentStatCard(
                 )
 
                 Text(
-                    text = "${stats.bouts}" +getString(context,R.string.bouts_given,pref.getLanguage())+" • ${stats.victories}V/${stats.defeats}D/${stats.draws}N",
+                    text = getString(context,R.string.bouts_given,pref.getLanguage())+" ${stats.bouts}"+" • ${stats.victories}V/${stats.defeats}D/${stats.draws}N",
                     color = Color(200, 200, 200),
                     fontSize = 12.sp
                 )

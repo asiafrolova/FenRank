@@ -38,8 +38,10 @@ android {
         }
 
 
-        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
-        buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
+        //buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        //buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
+        buildConfigField("String", "SUPABASE_URL", "\"https://ozvbygwhnlxzkayahndl.supabase.co\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dmJ5Z3dobmx4emtheWFobmRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1OTM1NTUsImV4cCI6MjA4NTE2OTU1NX0.c9nffFzJSh2a-Bg_vJVN1IV64BfdLKLgr-0dg4l8oVc\"")
     }
 
 
