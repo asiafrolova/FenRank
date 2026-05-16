@@ -38,10 +38,9 @@ android {
         }
 
 
-        //buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
-        //buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
-        buildConfigField("String", "SUPABASE_URL", "\"https://ozvbygwhnlxzkayahndl.supabase.co\"")
-        buildConfigField("String", "SUPABASE_KEY", "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96dmJ5Z3dobmx4emtheWFobmRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1OTM1NTUsImV4cCI6MjA4NTE2OTU1NX0.c9nffFzJSh2a-Bg_vJVN1IV64BfdLKLgr-0dg4l8oVc\"")
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
+
     }
 
 
@@ -176,52 +175,42 @@ dependencies {
 
         implementation("androidx.room:room-runtime:$room_version")
 
-        // If this project uses any Kotlin source, use Kotlin Symbol Processing (KSP)
-        // See Add the KSP plugin to your project
-        //ksp("androidx.room:room-compiler:$room_version")
-
-        // If this project only uses Java source, use the Java annotationProcessor
-        // No additional plugins are necessary
         kapt("androidx.room:room-compiler:$room_version")
 
-        // optional - Kotlin Extensions and Coroutines support for Room
+
         implementation("androidx.room:room-ktx:$room_version")
 
-        // optional - RxJava2 support for Room
         implementation("androidx.room:room-rxjava2:$room_version")
 
-        // optional - RxJava3 support for Room
+
         implementation("androidx.room:room-rxjava3:$room_version")
 
-        // optional - Guava support for Room, including Optional and ListenableFuture
         implementation("androidx.room:room-guava:$room_version")
-
-        // optional - Test helpers
         testImplementation("androidx.room:room-testing:$room_version")
 
-        // optional - Paging 3 Integration
+
         implementation("androidx.room:room-paging:$room_version")
 
         implementation("androidx.core:core-splashscreen:1.2.0")
 
         val work_version = "2.11.1"
 
-        // (Java only)
+
         implementation("androidx.work:work-runtime:$work_version")
 
-        // Kotlin + coroutines
+
         implementation("androidx.work:work-runtime-ktx:$work_version")
 
-        // optional - RxJava2 support
+
         implementation("androidx.work:work-rxjava2:$work_version")
 
-        // optional - GCMNetworkManager support
+
         implementation("androidx.work:work-gcm:$work_version")
 
-        // optional - Test helpers
+
         androidTestImplementation("androidx.work:work-testing:$work_version")
 
-        // optional - Multiprocess support
+
         implementation("androidx.work:work-multiprocess:$work_version")
     }
 
